@@ -36,26 +36,42 @@ const BrowserShell: React.FC = () => {
     };
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: '20px' }}>
-            <div style={{ display: 'flex', marginBottom: '10px', gap: '10px' }}>
+        <div className="glass-card" style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+        }}>
+            <div style={{
+                padding: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                borderBottom: '1px solid var(--glass-border)'
+            }}>
+                <button className="round-btn" onClick={() => { }}>←</button>
+                <button className="round-btn" onClick={() => { }}>→</button>
+                <button className="round-btn" onClick={() => { }}>↻</button>
+
                 <input
                     type="text"
+                    className="pill-input"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Enter URL"
-                    style={{ flex: 1, padding: '8px' }}
+                    onKeyDown={(e) => e.key === 'Enter' && handleNavigate()}
+                    placeholder="Search or enter URL"
+                    style={{ flex: 1 }}
                 />
-                <button onClick={handleNavigate} style={{ padding: '8px 16px' }}>
-                    Go
-                </button>
+
+                <button className="round-btn" onClick={handleNavigate}>Go</button>
             </div>
-            <div style={{ flex: 1, display: 'flex', border: '1px solid #ccc', overflow: 'hidden' }}>
+
+            <div style={{ flex: 1, display: 'flex', position: 'relative' }}>
                 <WebviewContainer currentUrl={currentUrl} />
             </div>
         </div>
     );
 };
 
-export default BrowserShell;
 
+export default BrowserShell;
