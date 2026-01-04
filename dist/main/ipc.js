@@ -17,8 +17,8 @@ const setupIpc = (mainWindow) => {
         console.log(`Page loaded: ${JSON.stringify(data)}`);
         await (0, historyStore_1.recordVisit)(data.url, data.title);
     });
-    electron_1.ipcMain.handle('arc:getRecommendations', async () => {
-        return await (0, recommender_1.getJarvisRecommendations)();
+    electron_1.ipcMain.handle('jarvis:getRecommendations', async (_event, limit) => {
+        return await (0, recommender_1.getJarvisRecommendations)(limit ?? 5);
     });
 };
 exports.setupIpc = setupIpc;

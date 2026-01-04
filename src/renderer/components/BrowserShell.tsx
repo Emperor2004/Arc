@@ -2,11 +2,14 @@ import React, { useState } from 'react';
 import WebviewContainer from './WebviewContainer';
 
 // Define the interface for the exposed API
+import { Recommendation } from '../../core/types';
+
+// Define the interface for the exposed API
 interface ArcAPI {
     navigate: (url: string) => void;
     onNavigation: (callback: (event: any, url: string) => void) => void;
     pageLoaded: (data: { url: string; title: string }) => void;
-    getJarvisRecommendations: (limit?: number) => Promise<any[]>; // Use explicit type if available, otherwise any[] for now
+    getJarvisRecommendations: (limit?: number) => Promise<Recommendation[]>;
 }
 
 
@@ -26,14 +29,20 @@ const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigate }) => {
     const [currentUrl, setCurrentUrl] = useState('');
 
     const handleNavigate = () => {
+        let targetUrl = url;
+        if (!/^https?:\/\//i.test(targetUrl)) {
+            targetUrl = `https://${targetUrl}`;
+        }
+
         if (window.arc) {
-            window.arc.navigate(url);
-            setCurrentUrl(url); // Update local state for webview
+            window.arc.navigate(targetUrl);
+            setCurrentUrl(targetUrl); // Update local state for webview
             if (onNavigate) onNavigate();
         } else {
             console.warn('window.arc is not defined');
         }
     };
+
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
