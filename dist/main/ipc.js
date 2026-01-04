@@ -9,7 +9,10 @@ const setupIpc = (mainWindow) => {
             targetUrl = `https://${url}`;
         }
         console.log(`Navigating to: ${targetUrl}`);
-        mainWindow.webContents.loadURL(targetUrl);
+        // mainWindow.webContents.loadURL(targetUrl);
+    });
+    electron_1.ipcMain.on('arc:pageLoaded', (event, data) => {
+        console.log(`Page loaded: ${JSON.stringify(data)}`);
     });
 };
 exports.setupIpc = setupIpc;

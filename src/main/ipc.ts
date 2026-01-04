@@ -7,6 +7,10 @@ export const setupIpc = (mainWindow: BrowserWindow) => {
             targetUrl = `https://${url}`;
         }
         console.log(`Navigating to: ${targetUrl}`);
-        mainWindow.webContents.loadURL(targetUrl);
+        // mainWindow.webContents.loadURL(targetUrl);
+    });
+
+    ipcMain.on('arc:pageLoaded', (event, data: { url: string; title: string }) => {
+        console.log(`Page loaded: ${JSON.stringify(data)}`);
     });
 };

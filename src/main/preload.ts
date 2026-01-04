@@ -5,5 +5,7 @@ contextBridge.exposeInMainWorld('arc', {
     onNavigation: (callback: (event: any, url: string) => void) => {
         ipcRenderer.on('navigate-to', callback);
     },
+    pageLoaded: (data: { url: string; title: string }) => ipcRenderer.send('arc:pageLoaded', data),
 });
+
 

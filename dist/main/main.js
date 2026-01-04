@@ -11,6 +11,7 @@ const createWindow = () => {
         height: 800,
         webPreferences: {
             preload: (0, path_1.join)(__dirname, 'preload.js'),
+            webviewTag: true,
         },
     });
     (0, ipc_1.setupIpc)(mainWindow);
