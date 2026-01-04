@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import WebviewContainer from './WebviewContainer';
 
 // Define the interface for the exposed API
-import { Recommendation } from '../../core/types';
+import { Recommendation, HistoryEntry } from '../../core/types';
 
 // Define the interface for the exposed API
 interface ArcAPI {
@@ -10,6 +10,7 @@ interface ArcAPI {
     onNavigation: (callback: (event: any, url: string) => void) => void;
     pageLoaded: (data: { url: string; title: string }) => void;
     getJarvisRecommendations: (limit?: number) => Promise<Recommendation[]>;
+    getRecentHistory: (limit?: number) => Promise<HistoryEntry[]>;
 }
 
 

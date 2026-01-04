@@ -1,7 +1,6 @@
 import { ipcMain, BrowserWindow } from 'electron';
-import { recordVisit } from '../core/historyStore';
+import { recordVisit, getRecentHistory } from '../core/historyStore';
 import { getJarvisRecommendations } from '../core/recommender';
-
 import { PageLoadedPayload } from '../core/types';
 
 
@@ -16,6 +15,11 @@ export const setupIpc = (mainWindow: BrowserWindow) => {
     });
 
     ipcMain.on('arc:pageLoaded', async (event, data: PageLoadedPayload) => {
+        // Validate payload
+        if (!data || !data.url) {
+            console.warn('arc:pageLoaded received invalid payload');
+            return;
+        }
         console.log(`Page loaded: ${JSON.stringify(data)}`);
         await recordVisit(data.url, data.title);
     });
@@ -23,6 +27,11 @@ export const setupIpc = (mainWindow: BrowserWindow) => {
     ipcMain.handle('jarvis:getRecommendations', async (_event, limit?: number) => {
         return await getJarvisRecommendations(limit ?? 5);
     });
+
+    ipcMain.handle('arc:getRecentHistory', async (_event, limit?: number) => {
+        return await getRecentHistory(limit ?? 50);
+    });
 };
+
 
 
