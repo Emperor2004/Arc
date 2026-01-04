@@ -1,4 +1,7 @@
 import { ipcMain, BrowserWindow } from 'electron';
+import { recordVisit } from '../core/historyStore';
+import { PageLoadedPayload } from '../core/types';
+
 
 export const setupIpc = (mainWindow: BrowserWindow) => {
     ipcMain.on('arc:navigate', (event, url: string) => {
@@ -10,7 +13,9 @@ export const setupIpc = (mainWindow: BrowserWindow) => {
         // mainWindow.webContents.loadURL(targetUrl);
     });
 
-    ipcMain.on('arc:pageLoaded', (event, data: { url: string; title: string }) => {
+    ipcMain.on('arc:pageLoaded', async (event, data: PageLoadedPayload) => {
         console.log(`Page loaded: ${JSON.stringify(data)}`);
+        await recordVisit(data.url, data.title);
     });
 };
+
