@@ -14,19 +14,36 @@ const setupIpc = (mainWindow) => {
         // mainWindow.webContents.loadURL(targetUrl);
     });
     electron_1.ipcMain.on('arc:pageLoaded', async (event, data) => {
-        // Validate payload
-        if (!data || !data.url) {
-            console.warn('arc:pageLoaded received invalid payload');
-            return;
+        try {
+            // Validate payload
+            if (!data || !data.url) {
+                console.warn('arc:pageLoaded received invalid payload');
+                return;
+            }
+            console.log(`Page loaded: ${JSON.stringify(data)}`);
+            await (0, historyStore_1.recordVisit)(data.url, data.title);
         }
-        console.log(`Page loaded: ${JSON.stringify(data)}`);
-        await (0, historyStore_1.recordVisit)(data.url, data.title);
+        catch (err) {
+            console.error('Error in arc:pageLoaded handler:', err);
+        }
     });
     electron_1.ipcMain.handle('jarvis:getRecommendations', async (_event, limit) => {
-        return await (0, recommender_1.getJarvisRecommendations)(limit ?? 5);
+        try {
+            return await (0, recommender_1.getJarvisRecommendations)(limit ?? 5);
+        }
+        catch (err) {
+            console.error('Error in jarvis:getRecommendations handler:', err);
+            return [];
+        }
     });
     electron_1.ipcMain.handle('arc:getRecentHistory', async (_event, limit) => {
-        return await (0, historyStore_1.getRecentHistory)(limit ?? 50);
+        try {
+            return await (0, historyStore_1.getRecentHistory)(limit ?? 50);
+        }
+        catch (err) {
+            console.error('Error in arc:getRecentHistory handler:', err);
+            return [];
+        }
     });
 };
 exports.setupIpc = setupIpc;

@@ -1,37 +1,60 @@
-import Database from 'better-sqlite3';
-import { app } from 'electron';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { HistoryEntry } from './types';
 
-// Initialize DB path using Electron's userData directory
-const dbPath = join(app.getPath('userData'), 'history.db');
-let db: Database.Database;
+// Use a local data folder in the project root for dev mode
+// This avoids issues with Electron's app module not being ready
+const DATA_DIR = join(__dirname, '..', '..', 'data');
+const HISTORY_FILE = join(DATA_DIR, 'history.json');
 
-try {
-  db = new Database(dbPath);
-  db.pragma('journal_mode = WAL');
+// ===== Internal Helpers =====
 
-  // Create history table if it doesn't exist
-  db.exec(`
-        CREATE TABLE IF NOT EXISTS history (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            url TEXT NOT NULL UNIQUE,
-            title TEXT,
-            visited_at INTEGER NOT NULL,
-            visit_count INTEGER NOT NULL DEFAULT 1
-        )
-    `);
+/**
+ * Load history from JSON file
+ */
+const loadHistory = (): HistoryEntry[] => {
+  try {
+    if (existsSync(HISTORY_FILE)) {
+      const raw = readFileSync(HISTORY_FILE, 'utf-8');
+      const data = JSON.parse(raw);
+      return Array.isArray(data) ? data : [];
+    }
+  } catch (err) {
+    console.error('Failed to load history:', err);
+  }
+  return [];
+};
 
-  console.log(`History DB initialized at: ${dbPath}`);
-} catch (err) {
-  console.error('Failed to initialize history database:', err);
-}
+/**
+ * Save history to JSON file
+ */
+const saveHistory = (entries: HistoryEntry[]): void => {
+  try {
+    // Ensure data directory exists
+    if (!existsSync(DATA_DIR)) {
+      mkdirSync(DATA_DIR, { recursive: true });
+    }
+    writeFileSync(HISTORY_FILE, JSON.stringify(entries, null, 2));
+  } catch (err) {
+    console.error('Failed to save history:', err);
+  }
+};
+
+/**
+ * Get next available ID (emulates autoincrement)
+ */
+const getNextId = (entries: HistoryEntry[]): number => {
+  if (entries.length === 0) return 1;
+  return Math.max(...entries.map(e => e.id)) + 1;
+};
+
+// ===== Public API =====
 
 /**
  * Record a page visit. If URL exists, increment visit_count and update visited_at.
- * Otherwise insert a new row.
+ * Otherwise insert a new entry.
  */
-export const recordVisit = async (url: string, title: string | null): Promise<void> => {
+export async function recordVisit(url: string, title: string | null): Promise<void> {
   try {
     // Normalize URL
     const normalizedUrl = url?.trim();
@@ -40,39 +63,47 @@ export const recordVisit = async (url: string, title: string | null): Promise<vo
       return;
     }
 
+    const entries = loadHistory();
     const visitedAt = Date.now();
+    const existingIndex = entries.findIndex(e => e.url === normalizedUrl);
 
-    const stmt = db.prepare(`
-            INSERT INTO history (url, title, visited_at, visit_count)
-            VALUES (@url, @title, @visitedAt, 1)
-            ON CONFLICT(url) DO UPDATE SET
-                title = COALESCE(@title, title),
-                visited_at = @visitedAt,
-                visit_count = visit_count + 1
-        `);
+    if (existingIndex >= 0) {
+      // Update existing entry
+      entries[existingIndex] = {
+        ...entries[existingIndex],
+        title: title || entries[existingIndex].title,
+        visited_at: visitedAt,
+        visit_count: entries[existingIndex].visit_count + 1
+      };
+    } else {
+      // Insert new entry
+      entries.push({
+        id: getNextId(entries),
+        url: normalizedUrl,
+        title,
+        visited_at: visitedAt,
+        visit_count: 1
+      });
+    }
 
-    stmt.run({ url: normalizedUrl, title, visitedAt });
+    saveHistory(entries);
     console.log(`Recorded visit: ${normalizedUrl}`);
   } catch (err) {
     console.error('Failed to record visit:', err);
   }
-};
+}
 
 /**
  * Get recent history entries ordered by visited_at DESC.
  */
-export const getRecentHistory = async (limit: number = 50): Promise<HistoryEntry[]> => {
+export async function getRecentHistory(limit: number = 50): Promise<HistoryEntry[]> {
   try {
-    const stmt = db.prepare(`
-            SELECT id, url, title, visited_at, visit_count
-            FROM history
-            ORDER BY visited_at DESC
-            LIMIT ?
-        `);
-
-    return stmt.all(limit) as HistoryEntry[];
+    const entries = loadHistory();
+    return entries
+      .sort((a, b) => b.visited_at - a.visited_at)
+      .slice(0, limit);
   } catch (err) {
     console.error('Failed to get recent history:', err);
     return [];
   }
-};
+}

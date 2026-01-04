@@ -13,16 +13,43 @@ interface Message {
 type JarvisStatus = 'idle' | 'thinking' | 'error';
 
 // Local helper for "smart" replies
-const getJarvisReply = async (text: string): Promise<{ text: string; action?: 'refresh' }> => {
+const getJarvisReply = async (text: string): Promise<{ text: string; action?: 'refresh' | 'history' }> => {
     const lower = text.toLowerCase();
+
+    // Handle history queries
+    if (lower.includes('history') || lower.includes('recent') || lower.includes('visited')) {
+        try {
+            if (window.arc && window.arc.getRecentHistory) {
+                const history = await window.arc.getRecentHistory(5);
+                if (history.length === 0) {
+                    return {
+                        text: "You haven't visited any sites yet. Start browsing and I'll remember where you've been!"
+                    };
+                }
+                const historyText = history
+                    .map((h, i) => `${i + 1}. ${h.title || h.url}`)
+                    .join('\n');
+                return {
+                    text: `Here's your recent history:\n${historyText}`,
+                    action: 'history'
+                };
+            }
+        } catch (err) {
+            console.error('Failed to fetch history:', err);
+        }
+        return { text: "I couldn't retrieve your history right now." };
+    }
+
+    // Handle recommendation queries
     if (lower.includes('recommend') || lower.includes('suggest') || lower.includes('refresh')) {
         return {
             text: "I’ve updated your recommendations based on where you’ve been browsing.",
             action: 'refresh'
         };
     }
+
     return {
-        text: "I'm still learning to chat. For now, let me show you some websites you might enjoy."
+        text: "I'm still learning to chat. Try asking for 'history' or 'recommendations'!"
     };
 };
 
@@ -130,13 +157,11 @@ const JarvisPanel: React.FC<JarvisPanelProps> = ({ refreshTrigger }) => {
 
     return (
         <div className="glass-card jarvis-panel" style={{
-            width: '320px',
-            height: 'calc(100% - 40px)',
-            margin: '20px 20px 20px 0',
             padding: '24px',
             display: 'flex',
             flexDirection: 'column',
-            gap: '20px'
+            gap: '16px',
+            overflow: 'hidden'
         }}>
             {/* Header */}
             <div>

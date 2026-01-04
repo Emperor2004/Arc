@@ -6,42 +6,24 @@ function App() {
   const [lastNavigated, setLastNavigated] = React.useState<number>(0);
 
   return (
-    <div className="app" style={{
-      height: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      background: 'transparent' // Background handled by body styles
-    }}>
-      <header style={{
-        padding: '16px 24px',
-        display: 'flex',
-        alignItems: 'center',
-        zIndex: 10
-      }}>
-        <div style={{ fontWeight: 'bold', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          Arc <span style={{ opacity: 0.5, fontSize: '14px' }}>+ Jarvis</span>
+    <div className="arc-root">
+      <header className="arc-header">
+        <div className="arc-logo">
+          Arc <span className="arc-logo-subtitle">+ Jarvis</span>
         </div>
       </header>
 
-      <main style={{
-        flex: 1,
-        display: 'flex',
-        overflow: 'hidden',
-        padding: '0 20px 20px 20px',
-        gap: '20px'
-      }}>
-        {/* Main Browser Area */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <main className="arc-main">
+        <section className="arc-main-left">
           <BrowserShell onNavigate={() => setLastNavigated(Date.now())} />
-        </div>
+        </section>
 
-        {/* Side Panel */}
-        <JarvisPanel refreshTrigger={lastNavigated} />
+        <aside className="arc-main-right">
+          <JarvisPanel refreshTrigger={lastNavigated} />
+        </aside>
       </main>
     </div>
   );
 }
 
-
 export default App;
-
