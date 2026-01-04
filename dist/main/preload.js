@@ -7,4 +7,5 @@ electron_1.contextBridge.exposeInMainWorld('arc', {
         electron_1.ipcRenderer.on('navigate-to', callback);
     },
     pageLoaded: (data) => electron_1.ipcRenderer.send('arc:pageLoaded', data),
+    getRecommendations: () => electron_1.ipcRenderer.invoke('arc:getRecommendations'),
 });

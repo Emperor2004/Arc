@@ -11,3 +11,15 @@ export interface HistoryEntry {
     visit_count: number;
 }
 
+export type RecommendationKind = 'favorite' | 'old_but_gold' | 'explore';
+
+export interface Recommendation {
+    id: number;              // internal id for DB/history link (can be 0 for synthetic)
+    url: string;
+    title: string | null;
+    reason: string;          // short human explanation
+    score: number;           // numeric ranking
+    kind: RecommendationKind;
+}
+
+

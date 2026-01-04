@@ -6,6 +6,7 @@ interface ArcAPI {
     navigate: (url: string) => void;
     onNavigation: (callback: (event: any, url: string) => void) => void;
     pageLoaded: (data: { url: string; title: string }) => void;
+    getJarvisRecommendations: (limit?: number) => Promise<any[]>; // Use explicit type if available, otherwise any[] for now
 }
 
 
@@ -16,7 +17,11 @@ declare global {
     }
 }
 
-const BrowserShell: React.FC = () => {
+interface BrowserShellProps {
+    onNavigate?: () => void;
+}
+
+const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigate }) => {
     const [url, setUrl] = useState('');
     const [currentUrl, setCurrentUrl] = useState('');
 
@@ -24,6 +29,7 @@ const BrowserShell: React.FC = () => {
         if (window.arc) {
             window.arc.navigate(url);
             setCurrentUrl(url); // Update local state for webview
+            if (onNavigate) onNavigate();
         } else {
             console.warn('window.arc is not defined');
         }

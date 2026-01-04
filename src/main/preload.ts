@@ -7,7 +7,10 @@ contextBridge.exposeInMainWorld('arc', {
         ipcRenderer.on('navigate-to', callback);
     },
     pageLoaded: (data: PageLoadedPayload) => ipcRenderer.send('arc:pageLoaded', data),
+    getJarvisRecommendations: (limit?: number) => ipcRenderer.invoke('jarvis:getRecommendations', limit),
+
 });
+
 
 
 

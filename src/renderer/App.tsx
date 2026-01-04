@@ -3,6 +3,8 @@ import BrowserShell from './components/BrowserShell';
 import JarvisPanel from './components/JarvisPanel';
 
 function App() {
+  const [lastNavigated, setLastNavigated] = React.useState<number>(0);
+
   return (
     <div className="app" style={{
       height: '100vh',
@@ -30,15 +32,16 @@ function App() {
       }}>
         {/* Main Browser Area */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-          <BrowserShell />
+          <BrowserShell onNavigate={() => setLastNavigated(Date.now())} />
         </div>
 
         {/* Side Panel */}
-        <JarvisPanel />
+        <JarvisPanel refreshTrigger={lastNavigated} />
       </main>
     </div>
   );
 }
+
 
 export default App;
 
