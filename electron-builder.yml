@@ -1,0 +1,13 @@
+appId: com.arc.browser
+productName: Arc Browser
+directories:
+  output: release
+files:
+  - dist/**/*
+  - public/**/*
+mac:
+  category: public.app-category.productivity
+win:
+  target: nsis
+linux:
+  target: AppImage
