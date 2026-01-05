@@ -4,6 +4,7 @@ exports.setupIpc = void 0;
 const electron_1 = require("electron");
 const historyStore_1 = require("../core/historyStore");
 const feedbackStore_1 = require("../core/feedbackStore");
+const settingsStore_1 = require("../core/settingsStore");
 const recommender_1 = require("../core/recommender");
 const setupIpc = (mainWindow) => {
     electron_1.ipcMain.on('arc:navigate', (event, url) => {
@@ -22,6 +23,11 @@ const setupIpc = (mainWindow) => {
                 return;
             }
             console.log(`Page loaded: ${JSON.stringify(data)}`);
+            // Skip history recording for incognito tabs
+            if (data.incognito) {
+                console.log('Skipping history recording for incognito tab');
+                return;
+            }
             await (0, historyStore_1.recordVisit)(data.url, data.title);
         }
         catch (err) {
@@ -53,6 +59,45 @@ const setupIpc = (mainWindow) => {
         }
         catch (err) {
             console.error('Error in jarvis:sendFeedback handler:', err);
+            return { ok: false };
+        }
+    });
+    // Settings handlers
+    electron_1.ipcMain.handle('arc:getSettings', async () => {
+        try {
+            return await (0, settingsStore_1.getSettings)();
+        }
+        catch (err) {
+            console.error('Error in arc:getSettings handler:', err);
+            throw err;
+        }
+    });
+    electron_1.ipcMain.handle('arc:updateSettings', async (_event, partial) => {
+        try {
+            return await (0, settingsStore_1.updateSettings)(partial);
+        }
+        catch (err) {
+            console.error('Error in arc:updateSettings handler:', err);
+            throw err;
+        }
+    });
+    electron_1.ipcMain.handle('arc:clearHistory', async () => {
+        try {
+            await (0, settingsStore_1.clearHistory)();
+            return { ok: true };
+        }
+        catch (err) {
+            console.error('Error in arc:clearHistory handler:', err);
+            return { ok: false };
+        }
+    });
+    electron_1.ipcMain.handle('arc:clearFeedback', async () => {
+        try {
+            await (0, settingsStore_1.clearFeedback)();
+            return { ok: true };
+        }
+        catch (err) {
+            console.error('Error in arc:clearFeedback handler:', err);
             return { ok: false };
         }
     });

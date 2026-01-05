@@ -1,6 +1,8 @@
 export interface PageLoadedPayload {
     url: string;
     title: string;
+    tabId?: string;
+    incognito?: boolean;
 }
 
 export interface HistoryEntry {
@@ -29,4 +31,19 @@ export interface RecommendationFeedback {
     url: string;
     value: FeedbackValue;
     created_at: number;      // timestamp (ms)
+}
+
+export interface ArcSettings {
+    theme: 'system' | 'light' | 'dark';
+    jarvisEnabled: boolean;
+    useHistoryForRecommendations: boolean;
+    incognitoEnabled: boolean;
+}
+
+export interface Tab {
+    id: string;
+    title: string;
+    url: string;
+    isActive: boolean;
+    incognito?: boolean;
 }

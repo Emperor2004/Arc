@@ -10,4 +10,9 @@ electron_1.contextBridge.exposeInMainWorld('arc', {
     getJarvisRecommendations: (limit) => electron_1.ipcRenderer.invoke('jarvis:getRecommendations', limit),
     getRecentHistory: (limit) => electron_1.ipcRenderer.invoke('arc:getRecentHistory', limit),
     sendJarvisFeedback: (feedback) => electron_1.ipcRenderer.invoke('jarvis:sendFeedback', feedback),
+    // Settings methods
+    getSettings: () => electron_1.ipcRenderer.invoke('arc:getSettings'),
+    updateSettings: (partial) => electron_1.ipcRenderer.invoke('arc:updateSettings', partial),
+    clearHistory: () => electron_1.ipcRenderer.invoke('arc:clearHistory'),
+    clearFeedback: () => electron_1.ipcRenderer.invoke('arc:clearFeedback'),
 });

@@ -1,4 +1,4 @@
-import { PageLoadedPayload, RecommendationFeedback, Recommendation, HistoryEntry } from '../../core/types';
+import { PageLoadedPayload, RecommendationFeedback, Recommendation, HistoryEntry, ArcSettings } from '../../core/types';
 
 declare global {
   interface Window {
@@ -13,4 +13,10 @@ export interface ArcAPI {
   getJarvisRecommendations: (limit?: number) => Promise<Recommendation[]>;
   getRecentHistory: (limit?: number) => Promise<HistoryEntry[]>;
   sendJarvisFeedback: (feedback: RecommendationFeedback) => Promise<{ ok: boolean }>;
+  
+  // Settings methods
+  getSettings: () => Promise<ArcSettings>;
+  updateSettings: (partial: Partial<ArcSettings>) => Promise<ArcSettings>;
+  clearHistory: () => Promise<{ ok: boolean }>;
+  clearFeedback: () => Promise<{ ok: boolean }>;
 }

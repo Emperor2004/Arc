@@ -1,8 +1,9 @@
 import { ipcMain, BrowserWindow } from 'electron';
 import { recordVisit, getRecentHistory } from '../core/historyStore';
 import { recordFeedback } from '../core/feedbackStore';
+import { getSettings, updateSettings, clearHistory, clearFeedback } from '../core/settingsStore';
 import { getJarvisRecommendations } from '../core/recommender';
-import { PageLoadedPayload, RecommendationFeedback } from '../core/types';
+import { PageLoadedPayload, RecommendationFeedback, ArcSettings } from '../core/types';
 
 
 export const setupIpc = (mainWindow: BrowserWindow) => {
@@ -23,6 +24,13 @@ export const setupIpc = (mainWindow: BrowserWindow) => {
                 return;
             }
             console.log(`Page loaded: ${JSON.stringify(data)}`);
+            
+            // Skip history recording for incognito tabs
+            if (data.incognito) {
+                console.log('Skipping history recording for incognito tab');
+                return;
+            }
+            
             await recordVisit(data.url, data.title);
         } catch (err) {
             console.error('Error in arc:pageLoaded handler:', err);
@@ -53,6 +61,45 @@ export const setupIpc = (mainWindow: BrowserWindow) => {
             return { ok: true };
         } catch (err) {
             console.error('Error in jarvis:sendFeedback handler:', err);
+            return { ok: false };
+        }
+    });
+
+    // Settings handlers
+    ipcMain.handle('arc:getSettings', async () => {
+        try {
+            return await getSettings();
+        } catch (err) {
+            console.error('Error in arc:getSettings handler:', err);
+            throw err;
+        }
+    });
+
+    ipcMain.handle('arc:updateSettings', async (_event, partial: Partial<ArcSettings>) => {
+        try {
+            return await updateSettings(partial);
+        } catch (err) {
+            console.error('Error in arc:updateSettings handler:', err);
+            throw err;
+        }
+    });
+
+    ipcMain.handle('arc:clearHistory', async () => {
+        try {
+            await clearHistory();
+            return { ok: true };
+        } catch (err) {
+            console.error('Error in arc:clearHistory handler:', err);
+            return { ok: false };
+        }
+    });
+
+    ipcMain.handle('arc:clearFeedback', async () => {
+        try {
+            await clearFeedback();
+            return { ok: true };
+        } catch (err) {
+            console.error('Error in arc:clearFeedback handler:', err);
             return { ok: false };
         }
     });
