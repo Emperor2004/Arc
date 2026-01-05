@@ -16,5 +16,11 @@
     "url": "https://test.com",
     "value": "dislike",
     "created_at": 1767599944438
+  },
+  {
+    "id": 0,
+    "url": "https://www.figma.com/",
+    "value": "like",
+    "created_at": 1767601879326
   }
 ]

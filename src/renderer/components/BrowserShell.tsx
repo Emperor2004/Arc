@@ -22,9 +22,11 @@ declare global {
 
 interface BrowserShellProps {
     onNavigationComplete?: () => void;
+    onMaximize?: () => void;
+    isMaximized?: boolean;
 }
 
-const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete }) => {
+const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete, onMaximize, isMaximized }) => {
     const [url, setUrl] = useState('');
     const [currentUrl, setCurrentUrl] = useState('');
 
@@ -66,6 +68,16 @@ const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete }) => 
                         placeholder="Search or enter URL"
                     />
                     <button className="round-btn" onClick={handleNavigate}>Go</button>
+                    {onMaximize && (
+                        <button 
+                            className="icon-button icon-button--glass" 
+                            type="button"
+                            onClick={onMaximize}
+                            title={isMaximized ? "Restore browser" : "Maximize browser"}
+                        >
+                            ⤢
+                        </button>
+                    )}
                 </div>
             </div>
 

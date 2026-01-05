@@ -1,9 +1,12 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import BrowserShell from './components/BrowserShell';
 import JarvisPanel, { JarvisPanelHandle } from './components/JarvisPanel';
 
+type LayoutMode = 'normal' | 'browser_max' | 'jarvis_max';
+
 function App() {
   const [lastNavigated, setLastNavigated] = React.useState<number>(0);
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>('normal');
   const jarvisRef = useRef<JarvisPanelHandle | null>(null);
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -42,6 +45,15 @@ function App() {
     };
   }, []);
 
+  // Layout mode handlers
+  const handleBrowserMaximize = () => {
+    setLayoutMode(layoutMode === 'browser_max' ? 'normal' : 'browser_max');
+  };
+
+  const handleJarvisMaximize = () => {
+    setLayoutMode(layoutMode === 'jarvis_max' ? 'normal' : 'jarvis_max');
+  };
+
   return (
     <div className="arc-root">
       <header className="arc-header">
@@ -50,14 +62,27 @@ function App() {
         </div>
       </header>
 
-      <main className="arc-main">
-        <section className="arc-main-left">
-          <BrowserShell onNavigationComplete={handleNavigationComplete} />
-        </section>
+      <main className={`arc-main arc-main--${layoutMode}`}>
+        {layoutMode !== 'jarvis_max' && (
+          <section className="arc-main-left">
+            <BrowserShell 
+              onNavigationComplete={handleNavigationComplete}
+              onMaximize={handleBrowserMaximize}
+              isMaximized={layoutMode === 'browser_max'}
+            />
+          </section>
+        )}
 
-        <aside className="arc-main-right">
-          <JarvisPanel ref={jarvisRef} refreshTrigger={lastNavigated} />
-        </aside>
+        {layoutMode !== 'browser_max' && (
+          <aside className="arc-main-right">
+            <JarvisPanel 
+              ref={jarvisRef} 
+              refreshTrigger={lastNavigated}
+              onMaximize={handleJarvisMaximize}
+              isMaximized={layoutMode === 'jarvis_max'}
+            />
+          </aside>
+        )}
       </main>
     </div>
   );

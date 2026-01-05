@@ -7,6 +7,8 @@ export type JarvisPanelHandle = {
 
 interface JarvisPanelProps {
     refreshTrigger?: number;
+    onMaximize?: () => void;
+    isMaximized?: boolean;
 }
 
 interface Message {
@@ -57,7 +59,7 @@ const getJarvisReply = async (text: string): Promise<{ text: string; action?: 'r
     };
 };
 
-const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTrigger }, ref) => {
+const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTrigger, onMaximize, isMaximized }, ref) => {
     const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
     const [status, setStatus] = useState<JarvisStatus>('idle');
     const [error, setError] = useState<string | null>(null);
@@ -198,15 +200,28 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                             {statusUI.text}
                         </span>
                     </div>
-                    {/* Refresh Button */}
-                    <button
-                        onClick={fetchRecommendations}
-                        className="round-btn"
-                        style={{ padding: '4px 8px', fontSize: '12px' }}
-                        title="Search for recommendations"
-                    >
-                        ↻
-                    </button>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                        {/* Refresh Button */}
+                        <button
+                            onClick={fetchRecommendations}
+                            className="icon-button icon-button--glass"
+                            type="button"
+                            title="Refresh recommendations"
+                        >
+                            ↻
+                        </button>
+                        {/* Maximize Button */}
+                        {onMaximize && (
+                            <button
+                                onClick={onMaximize}
+                                className="icon-button icon-button--glass"
+                                type="button"
+                                title={isMaximized ? "Restore Jarvis" : "Maximize Jarvis"}
+                            >
+                                ⤢
+                            </button>
+                        )}
+                    </div>
                 </div>
                 <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 700 }}>Jarvis</h2>
                 <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
