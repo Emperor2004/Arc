@@ -1,142 +1,49 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import WebviewContainer from './WebviewContainer';
 import TabBar from './TabBar';
-import { Tab, ArcSettings, Recommendation, HistoryEntry } from '../../core/types';
+import AddressBar from './AddressBar';
+import { useTabsController } from '../hooks/useTabsController';
+import { useSettingsController } from '../hooks/useSettingsController';
+import { useDebug } from '../contexts/DebugContext';
 
-// Define the interface for the exposed API
-interface ArcAPI {
-    navigate: (url: string) => void;
-    onNavigation: (callback: (event: any, url: string) => void) => void;
-    pageLoaded: (data: { url: string; title: string; tabId?: string; incognito?: boolean }) => void;
-    getJarvisRecommendations: (limit?: number) => Promise<Recommendation[]>;
-    getRecentHistory: (limit?: number) => Promise<HistoryEntry[]>;
-    
-    // Settings methods
-    getSettings: () => Promise<ArcSettings>;
-    updateSettings: (partial: Partial<ArcSettings>) => Promise<ArcSettings>;
-    clearHistory: () => Promise<{ ok: boolean }>;
-    clearFeedback: () => Promise<{ ok: boolean }>;
-}
-
-// Extend Window interface to include arc
-declare global {
-    interface Window {
-        arc: ArcAPI;
-    }
-}
-
-interface BrowserShellProps {
+export interface BrowserShellProps {
     onNavigationComplete?: () => void;
     onMaximize?: () => void;
     isMaximized?: boolean;
 }
 
 const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete, onMaximize, isMaximized }) => {
-    const [url, setUrl] = useState('');
-    const [settings, setSettings] = useState<ArcSettings>({
-        theme: 'dark',
-        jarvisEnabled: true,
-        useHistoryForRecommendations: true,
-        incognitoEnabled: true
-    });
-    const [tabs, setTabs] = useState<Tab[]>([
-        {
-            id: 'tab-1',
-            title: 'New Tab',
-            url: '',
-            isActive: true,
-            incognito: false
-        }
-    ]);
+    const tabsController = useTabsController();
+    const { settings } = useSettingsController();
+    const { updateDebugState, logAction } = useDebug();
+    const [canGoBack, setCanGoBack] = React.useState(false);
+    const [canGoForward, setCanGoForward] = React.useState(false);
+    
+    const { 
+        tabs, 
+        activeTab, 
+        url, 
+        setUrl, 
+        handleNewTab, 
+        handleNewIncognitoTab, 
+        handleTabSelect, 
+        handleTabClose, 
+        handleTabTitleUpdate,
+        updateActiveTabUrl
+    } = tabsController;
 
-    // Load settings on mount
-    useEffect(() => {
-        const loadSettings = async () => {
-            try {
-                if (window.arc && window.arc.getSettings) {
-                    const loadedSettings = await window.arc.getSettings();
-                    setSettings(loadedSettings);
-                }
-            } catch (error) {
-                console.error('Failed to load settings in BrowserShell:', error);
-            }
-        };
-        loadSettings();
-    }, []);
-
-    const activeTab = tabs.find(tab => tab.isActive);
     const isIncognitoActive = activeTab?.incognito || false;
 
-    const generateTabId = () => `tab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-    const handleNewTab = () => {
-        const newTab: Tab = {
-            id: generateTabId(),
-            title: 'New Tab',
-            url: '',
-            isActive: false,
-            incognito: false
-        };
-        
-        setTabs(prevTabs => [
-            ...prevTabs.map(tab => ({ ...tab, isActive: false })),
-            { ...newTab, isActive: true }
-        ]);
-        setUrl('');
-    };
-
-    const handleNewIncognitoTab = () => {
-        const newTab: Tab = {
-            id: generateTabId(),
-            title: 'New Incognito Tab',
-            url: '',
-            isActive: false,
-            incognito: true
-        };
-        
-        setTabs(prevTabs => [
-            ...prevTabs.map(tab => ({ ...tab, isActive: false })),
-            { ...newTab, isActive: true }
-        ]);
-        setUrl('');
-    };
-
-    const handleTabSelect = (tabId: string) => {
-        setTabs(prevTabs => prevTabs.map(tab => ({
-            ...tab,
-            isActive: tab.id === tabId
-        })));
-        
-        const selectedTab = tabs.find(tab => tab.id === tabId);
-        if (selectedTab) {
-            setUrl(selectedTab.url);
-        }
-    };
-
-    const handleTabClose = (tabId: string) => {
-        setTabs(prevTabs => {
-            const filteredTabs = prevTabs.filter(tab => tab.id !== tabId);
-            
-            // If we're closing the active tab, activate another one
-            if (prevTabs.find(tab => tab.id === tabId)?.isActive && filteredTabs.length > 0) {
-                filteredTabs[filteredTabs.length - 1].isActive = true;
-                setUrl(filteredTabs[filteredTabs.length - 1].url);
-            }
-            
-            // If no tabs left, create a new one
-            if (filteredTabs.length === 0) {
-                return [{
-                    id: generateTabId(),
-                    title: 'New Tab',
-                    url: '',
-                    isActive: true,
-                    incognito: false
-                }];
-            }
-            
-            return filteredTabs;
+    // Update debug state when active tab changes
+    React.useEffect(() => {
+        updateDebugState({ 
+            activeTabId: activeTab?.id || null,
+            isIncognito: isIncognitoActive
         });
-    };
+        if (activeTab) {
+            logAction(`Tab switched to: ${activeTab.title || activeTab.url} (${activeTab.incognito ? 'incognito' : 'normal'})`);
+        }
+    }, [activeTab, isIncognitoActive, updateDebugState, logAction]);
 
     const handleNavigate = () => {
         let targetUrl = url;
@@ -146,11 +53,10 @@ const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete, onMax
 
         if (window.arc && activeTab) {
             window.arc.navigate(targetUrl);
+            logAction(`Navigation to: ${targetUrl}`);
             
             // Update the active tab's URL
-            setTabs(prevTabs => prevTabs.map(tab => 
-                tab.isActive ? { ...tab, url: targetUrl } : tab
-            ));
+            updateActiveTabUrl(targetUrl);
             
             // Trigger navigation completion callback
             if (onNavigationComplete) {
@@ -161,13 +67,47 @@ const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete, onMax
         }
     };
 
-    const handleTabTitleUpdate = (title: string) => {
-        if (activeTab) {
-            setTabs(prevTabs => prevTabs.map(tab => 
-                tab.id === activeTab.id ? { ...tab, title } : tab
-            ));
+    const handleBack = () => {
+        const webview = document.querySelector('webview');
+        if (webview && (webview as any).canGoBack()) {
+            (webview as any).goBack();
+            logAction('Browser back navigation');
         }
     };
+
+    const handleForward = () => {
+        const webview = document.querySelector('webview');
+        if (webview && (webview as any).canGoForward()) {
+            (webview as any).goForward();
+            logAction('Browser forward navigation');
+        }
+    };
+
+    const handleReload = () => {
+        const webview = document.querySelector('webview');
+        if (webview) {
+            (webview as any).reload();
+            logAction('Browser reload');
+        }
+    };
+
+    // Update navigation state when webview changes
+    const updateNavigationState = () => {
+        const webview = document.querySelector('webview');
+        if (webview) {
+            setCanGoBack((webview as any).canGoBack());
+            setCanGoForward((webview as any).canGoForward());
+        } else {
+            setCanGoBack(false);
+            setCanGoForward(false);
+        }
+    };
+
+    // Update navigation state periodically
+    React.useEffect(() => {
+        const interval = setInterval(updateNavigationState, 500);
+        return () => clearInterval(interval);
+    }, [activeTab]);
 
     return (
         <div className="browser-shell glass-card">
@@ -189,35 +129,19 @@ const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete, onMax
             )}
 
             {/* Toolbar with address bar */}
-            <div className="browser-toolbar">
-                <div className="browser-nav-buttons">
-                    <button className="round-btn" onClick={() => { }}>←</button>
-                    <button className="round-btn" onClick={() => { }}>→</button>
-                    <button className="round-btn" onClick={() => { }}>↻</button>
-                </div>
-
-                <div className="browser-address-bar">
-                    <input
-                        type="text"
-                        className="pill-input"
-                        value={url}
-                        onChange={(e) => setUrl(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleNavigate()}
-                        placeholder="Search or enter URL"
-                    />
-                    <button className="round-btn" onClick={handleNavigate}>Go</button>
-                    {onMaximize && (
-                        <button 
-                            className="icon-button icon-button--glass" 
-                            type="button"
-                            onClick={onMaximize}
-                            title={isMaximized ? "Restore browser" : "Maximize browser"}
-                        >
-                            ⤢
-                        </button>
-                    )}
-                </div>
-            </div>
+            <AddressBar
+                url={url}
+                onUrlChange={setUrl}
+                onNavigate={handleNavigate}
+                onBack={handleBack}
+                onForward={handleForward}
+                onReload={handleReload}
+                onMaximize={onMaximize}
+                isMaximized={isMaximized}
+                canGoBack={canGoBack}
+                canGoForward={canGoForward}
+                hasActiveTab={!!activeTab}
+            />
 
             {/* Webview content */}
             <div className="browser-content">

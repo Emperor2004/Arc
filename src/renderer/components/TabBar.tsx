@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tab } from '../../core/types';
 
-interface TabBarProps {
+export interface TabBarProps {
     tabs: Tab[];
     onNewTab: () => void;
     onNewIncognitoTab: () => void;

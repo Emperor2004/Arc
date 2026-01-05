@@ -2,16 +2,31 @@ import React, { useRef, useEffect, useState } from 'react';
 import BrowserShell from './components/BrowserShell';
 import JarvisPanel, { JarvisPanelHandle } from './components/JarvisPanel';
 import SettingsView from './components/SettingsView';
+import DebugOverlay from './components/DebugOverlay';
+import { DebugProvider, useDebug } from './contexts/DebugContext';
 
 type LayoutMode = 'normal' | 'browser_max' | 'jarvis_max';
 type AppSection = 'browser' | 'settings';
 
-function App() {
+const AppContent: React.FC = () => {
   const [lastNavigated, setLastNavigated] = React.useState<number>(0);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('normal');
   const [section, setSection] = useState<AppSection>('browser');
   const jarvisRef = useRef<JarvisPanelHandle | null>(null);
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { updateDebugState, logAction } = useDebug();
+
+  // Update debug state when section changes
+  useEffect(() => {
+    updateDebugState({ section });
+    logAction(`Section changed to: ${section}`);
+  }, [section, updateDebugState, logAction]);
+
+  // Update debug state when layout mode changes
+  useEffect(() => {
+    updateDebugState({ layoutMode });
+    logAction(`Layout mode changed to: ${layoutMode}`);
+  }, [layoutMode, updateDebugState, logAction]);
 
   // Trigger Jarvis refresh on app startup
   useEffect(() => {
@@ -26,6 +41,7 @@ function App() {
   // Handle navigation completion with debounced refresh
   const handleNavigationComplete = () => {
     setLastNavigated(Date.now());
+    logAction('Navigation completed');
     
     // Clear existing timeout
     if (refreshTimeoutRef.current) {
@@ -36,6 +52,7 @@ function App() {
     refreshTimeoutRef.current = setTimeout(() => {
       console.log('Refreshing Jarvis recommendations after navigation...');
       jarvisRef.current?.refresh();
+      logAction('Jarvis refresh triggered (debounced)');
     }, 15000);
   };
 
@@ -48,13 +65,25 @@ function App() {
     };
   }, []);
 
+  // Navigation handler for Jarvis
+  const handleJarvisNavigate = (url: string) => {
+    if (window.arc) {
+      window.arc.navigate(url);
+      logAction(`Jarvis navigation to: ${url}`);
+    }
+  };
+
   // Layout mode handlers
   const handleBrowserMaximize = () => {
-    setLayoutMode(layoutMode === 'browser_max' ? 'normal' : 'browser_max');
+    const newMode = layoutMode === 'browser_max' ? 'normal' : 'browser_max';
+    setLayoutMode(newMode);
+    logAction(`Browser maximize toggled: ${newMode}`);
   };
 
   const handleJarvisMaximize = () => {
-    setLayoutMode(layoutMode === 'jarvis_max' ? 'normal' : 'jarvis_max');
+    const newMode = layoutMode === 'jarvis_max' ? 'normal' : 'jarvis_max';
+    setLayoutMode(newMode);
+    logAction(`Jarvis maximize toggled: ${newMode}`);
   };
 
   return (
@@ -68,13 +97,19 @@ function App() {
         <div className="arc-nav">
           <button 
             className={`arc-nav-btn ${section === 'browser' ? 'arc-nav-btn--active' : ''}`}
-            onClick={() => setSection('browser')}
+            onClick={() => {
+              setSection('browser');
+              logAction('Section switched to browser');
+            }}
           >
             🌐 Browse
           </button>
           <button 
             className={`arc-nav-btn ${section === 'settings' ? 'arc-nav-btn--active' : ''}`}
-            onClick={() => setSection('settings')}
+            onClick={() => {
+              setSection('settings');
+              logAction('Section switched to settings');
+            }}
           >
             ⚙️ Settings
           </button>
@@ -100,6 +135,7 @@ function App() {
                 refreshTrigger={lastNavigated}
                 onMaximize={handleJarvisMaximize}
                 isMaximized={layoutMode === 'jarvis_max'}
+                onNavigate={handleJarvisNavigate}
               />
             </aside>
           )}
@@ -116,3 +152,12 @@ function App() {
 }
 
 export default App;
+
+const App: React.FC = () => {
+  return (
+    <DebugProvider>
+      <AppContent />
+      <DebugOverlay />
+    </DebugProvider>
+  );
+};

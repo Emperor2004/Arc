@@ -1,48 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { ArcSettings } from '../../core/types';
+import React, { useState } from 'react';
+import { useSettingsController } from '../hooks/useSettingsController';
 
-const SettingsView: React.FC = () => {
-    const [settings, setSettings] = useState<ArcSettings>({
-        theme: 'dark',
-        jarvisEnabled: true,
-        useHistoryForRecommendations: true,
-        incognitoEnabled: true
-    });
-    const [loading, setLoading] = useState(true);
+export interface SettingsViewProps {}
+
+const SettingsView: React.FC<SettingsViewProps> = () => {
+    const { settings, loading, updateSetting } = useSettingsController();
     const [message, setMessage] = useState<string | null>(null);
 
-    // Load settings on mount
-    useEffect(() => {
-        loadSettings();
-    }, []);
-
-    const loadSettings = async () => {
-        try {
-            setLoading(true);
-            if (window.arc && window.arc.getSettings) {
-                const loadedSettings = await window.arc.getSettings();
-                setSettings(loadedSettings);
-            }
-        } catch (error) {
-            console.error('Failed to load settings:', error);
-            showMessage('Failed to load settings');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const updateSetting = async <K extends keyof ArcSettings>(
+    const handleUpdateSetting = async <K extends keyof typeof settings>(
         key: K,
-        value: ArcSettings[K]
+        value: typeof settings[K]
     ) => {
         try {
-            if (window.arc && window.arc.updateSettings) {
-                const updatedSettings = await window.arc.updateSettings({ [key]: value });
-                setSettings(updatedSettings);
-                showMessage('Settings saved');
-            }
+            await updateSetting(key, value);
+            showMessage('Settings saved');
         } catch (error) {
-            console.error('Failed to update settings:', error);
             showMessage('Failed to save settings');
         }
     };
@@ -124,7 +96,7 @@ const SettingsView: React.FC = () => {
                                 <select 
                                     className="settings-select"
                                     value={settings.theme}
-                                    onChange={(e) => updateSetting('theme', e.target.value as ArcSettings['theme'])}
+                                    onChange={(e) => handleUpdateSetting('theme', e.target.value as typeof settings.theme)}
                                 >
                                     <option value="light">Light</option>
                                     <option value="dark">Dark</option>
@@ -153,7 +125,7 @@ const SettingsView: React.FC = () => {
                                     <input
                                         type="checkbox"
                                         checked={settings.jarvisEnabled}
-                                        onChange={(e) => updateSetting('jarvisEnabled', e.target.checked)}
+                                        onChange={(e) => handleUpdateSetting('jarvisEnabled', e.target.checked)}
                                         className="settings-checkbox"
                                     />
                                     <span className="settings-toggle-slider"></span>
@@ -173,7 +145,7 @@ const SettingsView: React.FC = () => {
                                     <input
                                         type="checkbox"
                                         checked={settings.useHistoryForRecommendations}
-                                        onChange={(e) => updateSetting('useHistoryForRecommendations', e.target.checked)}
+                                        onChange={(e) => handleUpdateSetting('useHistoryForRecommendations', e.target.checked)}
                                         className="settings-checkbox"
                                         disabled={!settings.jarvisEnabled}
                                     />
@@ -194,7 +166,7 @@ const SettingsView: React.FC = () => {
                                     <input
                                         type="checkbox"
                                         checked={settings.incognitoEnabled}
-                                        onChange={(e) => updateSetting('incognitoEnabled', e.target.checked)}
+                                        onChange={(e) => handleUpdateSetting('incognitoEnabled', e.target.checked)}
                                         className="settings-checkbox"
                                     />
                                     <span className="settings-toggle-slider"></span>
@@ -219,7 +191,7 @@ const SettingsView: React.FC = () => {
                                     </span>
                                 </div>
                                 <button 
-                                    className="settings-btn settings-btn--danger"
+                                    className="btn-danger"
                                     onClick={handleClearHistory}
                                 >
                                     Clear History
@@ -236,7 +208,7 @@ const SettingsView: React.FC = () => {
                                     </span>
                                 </div>
                                 <button 
-                                    className="settings-btn settings-btn--danger"
+                                    className="btn-danger"
                                     onClick={handleClearFeedback}
                                 >
                                     Clear Feedback

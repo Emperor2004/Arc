@@ -1,102 +1,60 @@
-import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { Recommendation, FeedbackValue } from '../../core/types';
+import React, { useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useJarvisController } from '../hooks/useJarvisController';
+import { useDebug } from '../contexts/DebugContext';
 
 export type JarvisPanelHandle = {
     refresh: () => void;
 };
 
-interface JarvisPanelProps {
+export interface JarvisPanelProps {
     refreshTrigger?: number;
     onMaximize?: () => void;
     isMaximized?: boolean;
+    onNavigate?: (url: string) => void;
 }
 
-interface Message {
-    from: 'user' | 'jarvis';
-    text: string;
-}
+const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTrigger, onMaximize, isMaximized, onNavigate }, ref) => {
+    const jarvisController = useJarvisController(onNavigate);
+    const { updateDebugState, logAction } = useDebug();
+    
+    const {
+        recommendations,
+        status,
+        error,
+        messages,
+        input,
+        feedback,
+        messagesEndRef,
+        fetchRecommendations,
+        handleSend,
+        handleInputChange,
+        handleKeyDown,
+        handleFeedback,
+        handleOpen
+    } = jarvisController;
 
-type JarvisStatus = 'idle' | 'thinking' | 'error';
-
-// Local helper for "smart" replies
-const getJarvisReply = async (text: string): Promise<{ text: string; action?: 'refresh' | 'history' }> => {
-    const lower = text.toLowerCase();
-
-    // Handle history queries
-    if (lower.includes('history') || lower.includes('recent') || lower.includes('visited')) {
-        try {
-            if (window.arc && window.arc.getRecentHistory) {
-                const history = await window.arc.getRecentHistory(5);
-                if (history.length === 0) {
-                    return {
-                        text: "You haven't visited any sites yet. Start browsing and I'll remember where you've been!"
-                    };
-                }
-                const historyText = history
-                    .map((h, i) => `${i + 1}. ${h.title || h.url}`)
-                    .join('\n');
-                return {
-                    text: `Here's your recent history:\n${historyText}`,
-                    action: 'history'
-                };
-            }
-        } catch (err) {
-            console.error('Failed to fetch history:', err);
+    // Update debug state when Jarvis status changes
+    useEffect(() => {
+        updateDebugState({ jarvisStatus: status });
+        if (status === 'thinking') {
+            logAction('Jarvis started thinking');
+        } else if (status === 'error') {
+            logAction(`Jarvis error: ${error || 'Unknown error'}`);
+        } else if (status === 'idle') {
+            logAction('Jarvis returned to idle');
         }
-        return { text: "I couldn't retrieve your history right now." };
-    }
-
-    // Handle recommendation queries
-    if (lower.includes('recommend') || lower.includes('suggest') || lower.includes('refresh')) {
-        return {
-            text: "I’ve updated your recommendations based on where you’ve been browsing.",
-            action: 'refresh'
-        };
-    }
-
-    return {
-        text: "I'm still learning to chat. Try asking for 'history' or 'recommendations'!"
-    };
-};
-
-const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTrigger, onMaximize, isMaximized }, ref) => {
-    const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-    const [status, setStatus] = useState<JarvisStatus>('idle');
-    const [error, setError] = useState<string | null>(null);
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [input, setInput] = useState('');
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const [feedback, setFeedback] = useState<Record<string, FeedbackValue>>({});
+    }, [status, error, updateDebugState, logAction]);
 
     // Expose refresh function via ref
     useImperativeHandle(ref, () => ({
         refresh: fetchRecommendations
     }));
 
-    const fetchRecommendations = async () => {
-        setStatus('thinking');
-        setError(null);
-        try {
-            if (window.arc && window.arc.getJarvisRecommendations) {
-                const recs = await window.arc.getJarvisRecommendations();
-                setRecommendations(recs);
-                setStatus('idle');
-            } else {
-                console.warn('Jarvis API not available');
-                setStatus('error');
-                setError('Jarvis API missing');
-            }
-        } catch (err) {
-            console.error('Failed to load recommendations:', err);
-            setStatus('error');
-            setError('Could not reach Jarvis.');
-        }
-    };
-
     // Initial load
     useEffect(() => {
         fetchRecommendations();
-    }, []);
+        logAction('Jarvis panel initialized');
+    }, [logAction]);
 
     // Refresh on trigger (debounced)
     useEffect(() => {
@@ -105,60 +63,7 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
             fetchRecommendations();
         }, 10000);
         return () => clearTimeout(timer);
-    }, [refreshTrigger]);
-
-    // Scroll to bottom of chat
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
-
-    const handleSend = async () => {
-        if (!input.trim()) return;
-
-        const userText = input.trim();
-        setMessages(prev => [...prev, { from: 'user', text: userText }]);
-        setInput('');
-
-        setStatus('thinking');
-
-        // Simulate thinking delay
-        setTimeout(async () => {
-            const reply = await getJarvisReply(userText);
-            setMessages(prev => [...prev, { from: 'jarvis', text: reply.text }]);
-
-            if (reply.action === 'refresh') {
-                fetchRecommendations();
-            } else {
-                setStatus('idle');
-            }
-        }, 600);
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter') handleSend();
-    };
-
-    const handleOpen = (url: string) => {
-        if (window.arc) {
-            window.arc.navigate(url);
-        }
-    };
-
-    const handleFeedback = (rec: Recommendation, value: FeedbackValue) => {
-        // Update local state
-        setFeedback(prev => ({ ...prev, [rec.url]: value }));
-
-        // Send to backend (if available)
-        if (window.arc && (window.arc as any).sendJarvisFeedback) {
-            (window.arc as any).sendJarvisFeedback({
-                id: rec.id,
-                url: rec.url,
-                value,
-                created_at: Date.now()
-            });
-        }
-        console.log(`Feedback: ${value} for ${rec.url}`);
-    };
+    }, [refreshTrigger, fetchRecommendations]);
 
     const getKindBadge = (kind: string) => {
         switch (kind) {
@@ -203,7 +108,10 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                     <div style={{ display: 'flex', gap: '4px' }}>
                         {/* Refresh Button */}
                         <button
-                            onClick={fetchRecommendations}
+                            onClick={() => {
+                                fetchRecommendations();
+                                logAction('Jarvis refresh manually triggered');
+                            }}
                             className="icon-button icon-button--glass"
                             type="button"
                             title="Refresh recommendations"
@@ -213,7 +121,10 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                         {/* Maximize Button */}
                         {onMaximize && (
                             <button
-                                onClick={onMaximize}
+                                onClick={() => {
+                                    onMaximize();
+                                    logAction(`Jarvis ${isMaximized ? 'restored' : 'maximized'}`);
+                                }}
                                 className="icon-button icon-button--glass"
                                 type="button"
                                 title={isMaximized ? "Restore Jarvis" : "Maximize Jarvis"}
@@ -316,43 +227,50 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                             {/* Action buttons */}
                             <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
                                 <button
-                                    className="round-btn"
+                                    className="btn-secondary"
                                     style={{
                                         flex: 1,
                                         fontSize: '12px',
                                         padding: '6px',
                                         background: feedback[rec.url] === 'like' ? 'rgba(34, 197, 94, 0.2)' : 'transparent',
-                                        border: '1px solid var(--glass-border)'
+                                        borderColor: feedback[rec.url] === 'like' ? '#22c55e' : 'var(--glass-border)'
                                     }}
-                                    onClick={() => handleFeedback(rec, 'like')}
+                                    onClick={() => {
+                                        handleFeedback(rec, 'like');
+                                        logAction(`Liked recommendation: ${rec.title || rec.url}`);
+                                    }}
                                     disabled={!!feedback[rec.url]}
                                 >
                                     👍
                                 </button>
                                 <button
-                                    className="round-btn"
+                                    className="btn-secondary"
                                     style={{
                                         flex: 1,
                                         fontSize: '12px',
                                         padding: '6px',
                                         background: feedback[rec.url] === 'dislike' ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
-                                        border: '1px solid var(--glass-border)'
+                                        borderColor: feedback[rec.url] === 'dislike' ? '#ef4444' : 'var(--glass-border)'
                                     }}
-                                    onClick={() => handleFeedback(rec, 'dislike')}
+                                    onClick={() => {
+                                        handleFeedback(rec, 'dislike');
+                                        logAction(`Disliked recommendation: ${rec.title || rec.url}`);
+                                    }}
                                     disabled={!!feedback[rec.url]}
                                 >
                                     👎
                                 </button>
                                 <button
-                                    className="round-btn"
+                                    className="btn-primary"
                                     style={{
                                         flex: 2,
                                         fontSize: '12px',
-                                        padding: '6px',
-                                        background: 'rgba(255,255,255,0.1)',
-                                        border: '1px solid var(--glass-border)'
+                                        padding: '6px'
                                     }}
-                                    onClick={() => handleOpen(rec.url)}
+                                    onClick={() => {
+                                        handleOpen(rec.url);
+                                        logAction(`Opened recommendation: ${rec.title || rec.url}`);
+                                    }}
                                 >
                                     Open
                                 </button>
@@ -393,18 +311,34 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
             </div>
 
             {/* Input Area */}
-            <div style={{ display: 'flex', gap: '8px' }}>
-                <input
-                    type="text"
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                <textarea
                     className="pill-input"
-                    placeholder="Ask Jarvis..."
-                    style={{ flex: 1, boxSizing: 'border-box', background: 'rgba(0,0,0,0.3)' }}
+                    placeholder="Ask Jarvis... (Shift+Enter for new line)"
+                    style={{ 
+                        flex: 1, 
+                        boxSizing: 'border-box', 
+                        background: 'rgba(0,0,0,0.3)',
+                        resize: 'none',
+                        minHeight: '40px',
+                        maxHeight: '120px',
+                        overflow: 'auto'
+                    }}
                     value={input}
-                    onChange={e => setInput(e.target.value)}
+                    onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
                     disabled={status === 'thinking'}
+                    rows={1}
                 />
-                <button className="round-btn" onClick={handleSend} style={{ padding: '0 16px' }} disabled={status === 'thinking'}>
+                <button 
+                    className="btn-primary" 
+                    onClick={() => {
+                        handleSend();
+                        logAction(`Chat message sent: ${input.substring(0, 50)}${input.length > 50 ? '...' : ''}`);
+                    }} 
+                    style={{ padding: '0 16px', height: '40px' }} 
+                    disabled={status === 'thinking' || !input.trim()}
+                >
                     Send
                 </button>
             </div>
