@@ -11,9 +11,10 @@ declare global {
 
 interface WebviewContainerProps {
     currentUrl: string;
+    onPageLoaded?: () => void;
 }
 
-const WebviewContainer: React.FC<WebviewContainerProps> = ({ currentUrl }) => {
+const WebviewContainer: React.FC<WebviewContainerProps> = ({ currentUrl, onPageLoaded }) => {
     const webviewRef = useRef<HTMLElement>(null);
 
     useEffect(() => {
@@ -27,6 +28,10 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({ currentUrl }) => {
                 if (window.arc) {
                     window.arc.pageLoaded({ url: src, title });
                 }
+                // Trigger page loaded callback
+                if (onPageLoaded) {
+                    onPageLoaded();
+                }
             };
 
             webview.addEventListener('did-finish-load', handleDidFinishLoad);
@@ -35,7 +40,7 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({ currentUrl }) => {
                 webview.removeEventListener('did-finish-load', handleDidFinishLoad);
             };
         }
-    }, []);
+    }, [onPageLoaded]);
 
     if (!currentUrl) {
         return (

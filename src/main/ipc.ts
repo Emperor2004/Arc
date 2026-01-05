@@ -1,7 +1,8 @@
 import { ipcMain, BrowserWindow } from 'electron';
 import { recordVisit, getRecentHistory } from '../core/historyStore';
+import { recordFeedback } from '../core/feedbackStore';
 import { getJarvisRecommendations } from '../core/recommender';
-import { PageLoadedPayload } from '../core/types';
+import { PageLoadedPayload, RecommendationFeedback } from '../core/types';
 
 
 export const setupIpc = (mainWindow: BrowserWindow) => {
@@ -43,6 +44,16 @@ export const setupIpc = (mainWindow: BrowserWindow) => {
         } catch (err) {
             console.error('Error in arc:getRecentHistory handler:', err);
             return [];
+        }
+    });
+
+    ipcMain.handle('jarvis:sendFeedback', async (_event, feedback: RecommendationFeedback) => {
+        try {
+            await recordFeedback(feedback);
+            return { ok: true };
+        } catch (err) {
+            console.error('Error in jarvis:sendFeedback handler:', err);
+            return { ok: false };
         }
     });
 };

@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { PageLoadedPayload } from '../core/types';
+import { PageLoadedPayload, RecommendationFeedback } from '../core/types';
 
 contextBridge.exposeInMainWorld('arc', {
     navigate: (url: string) => ipcRenderer.send('arc:navigate', url),
@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('arc', {
     pageLoaded: (data: PageLoadedPayload) => ipcRenderer.send('arc:pageLoaded', data),
     getJarvisRecommendations: (limit?: number) => ipcRenderer.invoke('jarvis:getRecommendations', limit),
     getRecentHistory: (limit?: number) => ipcRenderer.invoke('arc:getRecentHistory', limit),
+    sendJarvisFeedback: (feedback: RecommendationFeedback) => ipcRenderer.invoke('jarvis:sendFeedback', feedback),
 });
 
 

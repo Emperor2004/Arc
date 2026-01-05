@@ -3,6 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.setupIpc = void 0;
 const electron_1 = require("electron");
 const historyStore_1 = require("../core/historyStore");
+const feedbackStore_1 = require("../core/feedbackStore");
 const recommender_1 = require("../core/recommender");
 const setupIpc = (mainWindow) => {
     electron_1.ipcMain.on('arc:navigate', (event, url) => {
@@ -43,6 +44,16 @@ const setupIpc = (mainWindow) => {
         catch (err) {
             console.error('Error in arc:getRecentHistory handler:', err);
             return [];
+        }
+    });
+    electron_1.ipcMain.handle('jarvis:sendFeedback', async (_event, feedback) => {
+        try {
+            await (0, feedbackStore_1.recordFeedback)(feedback);
+            return { ok: true };
+        }
+        catch (err) {
+            console.error('Error in jarvis:sendFeedback handler:', err);
+            return { ok: false };
         }
     });
 };

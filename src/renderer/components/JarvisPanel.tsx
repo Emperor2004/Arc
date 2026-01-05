@@ -1,5 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Recommendation } from '../../core/types';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+import { Recommendation, FeedbackValue } from '../../core/types';
+
+export type JarvisPanelHandle = {
+    refresh: () => void;
+};
 
 interface JarvisPanelProps {
     refreshTrigger?: number;
@@ -53,34 +57,21 @@ const getJarvisReply = async (text: string): Promise<{ text: string; action?: 'r
     };
 };
 
-const JarvisPanel: React.FC<JarvisPanelProps> = ({ refreshTrigger }) => {
+const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTrigger }, ref) => {
     const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
     const [status, setStatus] = useState<JarvisStatus>('idle');
     const [error, setError] = useState<string | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [feedback, setFeedback] = useState<Record<string, FeedbackValue>>({});
 
-    // Initial load
-    useEffect(() => {
-        loadRecommendations();
-    }, []);
+    // Expose refresh function via ref
+    useImperativeHandle(ref, () => ({
+        refresh: fetchRecommendations
+    }));
 
-    // Refresh on trigger (debounced)
-    useEffect(() => {
-        if (!refreshTrigger) return;
-        const timer = setTimeout(() => {
-            loadRecommendations();
-        }, 10000);
-        return () => clearTimeout(timer);
-    }, [refreshTrigger]);
-
-    // Scroll to bottom of chat
-    useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [messages]);
-
-    const loadRecommendations = async () => {
+    const fetchRecommendations = async () => {
         setStatus('thinking');
         setError(null);
         try {
@@ -100,6 +91,25 @@ const JarvisPanel: React.FC<JarvisPanelProps> = ({ refreshTrigger }) => {
         }
     };
 
+    // Initial load
+    useEffect(() => {
+        fetchRecommendations();
+    }, []);
+
+    // Refresh on trigger (debounced)
+    useEffect(() => {
+        if (!refreshTrigger) return;
+        const timer = setTimeout(() => {
+            fetchRecommendations();
+        }, 10000);
+        return () => clearTimeout(timer);
+    }, [refreshTrigger]);
+
+    // Scroll to bottom of chat
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
+
     const handleSend = async () => {
         if (!input.trim()) return;
 
@@ -115,7 +125,7 @@ const JarvisPanel: React.FC<JarvisPanelProps> = ({ refreshTrigger }) => {
             setMessages(prev => [...prev, { from: 'jarvis', text: reply.text }]);
 
             if (reply.action === 'refresh') {
-                loadRecommendations();
+                fetchRecommendations();
             } else {
                 setStatus('idle');
             }
@@ -130,6 +140,22 @@ const JarvisPanel: React.FC<JarvisPanelProps> = ({ refreshTrigger }) => {
         if (window.arc) {
             window.arc.navigate(url);
         }
+    };
+
+    const handleFeedback = (rec: Recommendation, value: FeedbackValue) => {
+        // Update local state
+        setFeedback(prev => ({ ...prev, [rec.url]: value }));
+
+        // Send to backend (if available)
+        if (window.arc && (window.arc as any).sendJarvisFeedback) {
+            (window.arc as any).sendJarvisFeedback({
+                id: rec.id,
+                url: rec.url,
+                value,
+                created_at: Date.now()
+            });
+        }
+        console.log(`Feedback: ${value} for ${rec.url}`);
     };
 
     const getKindBadge = (kind: string) => {
@@ -174,7 +200,7 @@ const JarvisPanel: React.FC<JarvisPanelProps> = ({ refreshTrigger }) => {
                     </div>
                     {/* Refresh Button */}
                     <button
-                        onClick={loadRecommendations}
+                        onClick={fetchRecommendations}
                         className="round-btn"
                         style={{ padding: '4px 8px', fontSize: '12px' }}
                         title="Search for recommendations"
@@ -258,17 +284,64 @@ const JarvisPanel: React.FC<JarvisPanelProps> = ({ refreshTrigger }) => {
                                 {rec.reason}
                             </div>
 
-                            <button className="round-btn" style={{
-                                marginTop: '8px',
-                                width: '100%',
-                                justifyContent: 'center',
-                                background: 'rgba(255,255,255,0.1)',
-                                border: '1px solid var(--glass-border)'
-                            }}
-                                onClick={() => handleOpen(rec.url)}
-                            >
-                                Open
-                            </button>
+                            {/* Feedback indicator */}
+                            {feedback[rec.url] && (
+                                <div style={{
+                                    fontSize: '11px',
+                                    padding: '4px 8px',
+                                    borderRadius: '12px',
+                                    background: feedback[rec.url] === 'like' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+                                    color: feedback[rec.url] === 'like' ? '#22c55e' : '#ef4444',
+                                    alignSelf: 'flex-start'
+                                }}>
+                                    {feedback[rec.url] === 'like' ? '✓ Liked' : '✗ Muted'}
+                                </div>
+                            )}
+
+                            {/* Action buttons */}
+                            <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                                <button
+                                    className="round-btn"
+                                    style={{
+                                        flex: 1,
+                                        fontSize: '12px',
+                                        padding: '6px',
+                                        background: feedback[rec.url] === 'like' ? 'rgba(34, 197, 94, 0.2)' : 'transparent',
+                                        border: '1px solid var(--glass-border)'
+                                    }}
+                                    onClick={() => handleFeedback(rec, 'like')}
+                                    disabled={!!feedback[rec.url]}
+                                >
+                                    👍
+                                </button>
+                                <button
+                                    className="round-btn"
+                                    style={{
+                                        flex: 1,
+                                        fontSize: '12px',
+                                        padding: '6px',
+                                        background: feedback[rec.url] === 'dislike' ? 'rgba(239, 68, 68, 0.2)' : 'transparent',
+                                        border: '1px solid var(--glass-border)'
+                                    }}
+                                    onClick={() => handleFeedback(rec, 'dislike')}
+                                    disabled={!!feedback[rec.url]}
+                                >
+                                    👎
+                                </button>
+                                <button
+                                    className="round-btn"
+                                    style={{
+                                        flex: 2,
+                                        fontSize: '12px',
+                                        padding: '6px',
+                                        background: 'rgba(255,255,255,0.1)',
+                                        border: '1px solid var(--glass-border)'
+                                    }}
+                                    onClick={() => handleOpen(rec.url)}
+                                >
+                                    Open
+                                </button>
+                            </div>
                         </div>
                     ))
                 )}
@@ -322,6 +395,6 @@ const JarvisPanel: React.FC<JarvisPanelProps> = ({ refreshTrigger }) => {
             </div>
         </div>
     );
-};
+});
 
 export default JarvisPanel;

@@ -22,4 +22,11 @@ export interface Recommendation {
     kind: RecommendationKind;
 }
 
+export type FeedbackValue = 'like' | 'dislike';
 
+export interface RecommendationFeedback {
+    id: number;              // recommendation-related or history id
+    url: string;
+    value: FeedbackValue;
+    created_at: number;      // timestamp (ms)
+}

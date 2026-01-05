@@ -21,10 +21,10 @@ declare global {
 }
 
 interface BrowserShellProps {
-    onNavigate?: () => void;
+    onNavigationComplete?: () => void;
 }
 
-const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigate }) => {
+const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete }) => {
     const [url, setUrl] = useState('');
     const [currentUrl, setCurrentUrl] = useState('');
 
@@ -37,7 +37,10 @@ const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigate }) => {
         if (window.arc) {
             window.arc.navigate(targetUrl);
             setCurrentUrl(targetUrl);
-            if (onNavigate) onNavigate();
+            // Trigger navigation completion callback
+            if (onNavigationComplete) {
+                onNavigationComplete();
+            }
         } else {
             console.warn('window.arc is not defined');
         }
@@ -68,7 +71,10 @@ const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigate }) => {
 
             {/* Webview content */}
             <div className="browser-content">
-                <WebviewContainer currentUrl={currentUrl} />
+                <WebviewContainer 
+                    currentUrl={currentUrl} 
+                    onPageLoaded={onNavigationComplete}
+                />
             </div>
         </div>
     );
