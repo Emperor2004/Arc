@@ -1,0 +1,315 @@
+/* Light Theme */
+:root[data-theme="light"],
+.theme-light {
+  --bg-dark: #ffffff;
+  --glass-bg: rgba(0, 0, 0, 0.04);
+  --glass-border: rgba(0, 0, 0, 0.08);
+  --text-primary: #1a1a1a;
+  --text-secondary: rgba(0, 0, 0, 0.6);
+  --accent: #2d7ff9;
+  --accent-hover: #1e5fd6;
+  --danger: #ff4757;
+  --warning: #fbbf24;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 9999px;
+
+  --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.12);
+
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Dark Theme */
+:root[data-theme="dark"],
+.theme-dark {
+  --bg-dark: #0f1115;
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --text-primary: #ffffff;
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --accent: #2d7ff9;
+  --accent-hover: #4c91fa;
+  --danger: #ff4757;
+  --warning: #fbbf24;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 9999px;
+
+  --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 30px rgba(0, 0, 0, 0.3);
+
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Light theme body background */
+:root[data-theme="light"] body,
+.theme-light body {
+  background: #f5f5f5;
+  background: linear-gradient(135deg, #f5f5f5 0%, #eeeeee 100%);
+}
+
+/* Dark theme body background */
+:root[data-theme="dark"] body,
+.theme-dark body {
+  background: #0f1115;
+  background: radial-gradient(circle at top right, #1a2942 0%, #0f1115 100%);
+}
+
+/* Light theme specific adjustments */
+:root[data-theme="light"] .tab {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+:root[data-theme="light"] .tab:hover:not(.tab--disabled) {
+  background: rgba(0, 0, 0, 0.1);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+:root[data-theme="light"] .tab--active {
+  background: rgba(45, 127, 249, 0.1);
+  border-color: #2d7ff9;
+  box-shadow: 0 0 0 1px rgba(45, 127, 249, 0.2);
+}
+
+:root[data-theme="light"] .tab--incognito {
+  background: rgba(139, 69, 19, 0.1);
+  border-color: rgba(139, 69, 19, 0.2);
+}
+
+:root[data-theme="light"] .tab--incognito:hover:not(.tab--disabled) {
+  background: rgba(139, 69, 19, 0.15);
+}
+
+:root[data-theme="light"] .tab--incognito.tab--active {
+  background: rgba(139, 69, 19, 0.2);
+  border-color: #8b4513;
+}
+
+/* Light theme button adjustments */
+:root[data-theme="light"] .btn-secondary {
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+:root[data-theme="light"] .btn-secondary:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+:root[data-theme="light"] .btn-secondary:active:not(:disabled) {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* Light theme input adjustments */
+:root[data-theme="light"] .pill-input {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+:root[data-theme="light"] .pill-input:focus {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: #2d7ff9;
+  box-shadow: 0 0 0 2px rgba(45, 127, 249, 0.1);
+}
+
+/* Light theme select adjustments */
+:root[data-theme="light"] .settings-select {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+:root[data-theme="light"] .settings-select:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.08);
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+:root[data-theme="light"] .settings-select:focus {
+  background: rgba(0, 0, 0, 0.1);
+  border-color: #2d7ff9;
+  box-shadow: 0 0 0 2px rgba(45, 127, 249, 0.1);
+}
+
+/* Light theme toggle adjustments */
+:root[data-theme="light"] .settings-toggle-slider {
+  background: rgba(0, 0, 0, 0.15);
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+:root[data-theme="light"] .settings-toggle-slider:hover:not(.settings-checkbox:disabled + *) {
+  background: rgba(0, 0, 0, 0.2);
+  border-color: rgba(0, 0, 0, 0.25);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+}
+
+:root[data-theme="light"] .settings-toggle-slider:before {
+  background: #1a1a1a;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Light theme scrollbar */
+:root[data-theme="light"] ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+:root[data-theme="light"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Light theme icon button */
+:root[data-theme="light"] .icon-button--glass {
+  background: rgba(0, 0, 0, 0.08);
+  color: #1a1a1a;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
+}
+
+:root[data-theme="light"] .icon-button--glass:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+}
+
+:root[data-theme="light"] .icon-button--glass:active:not(:disabled) {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* Light theme context menu */
+:root[data-theme="light"] .context-menu {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+:root[data-theme="light"] .context-menu-item:hover:not(.context-menu-item--disabled) {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+:root[data-theme="light"] .context-menu-separator {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* Light theme settings message */
+:root[data-theme="light"] .settings-message {
+  background: rgba(45, 127, 249, 0.08);
+  border: 1px solid rgba(45, 127, 249, 0.2);
+  color: #1e5fd6;
+}
+
+/* Light theme incognito banner */
+:root[data-theme="light"] .incognito-banner {
+  background: linear-gradient(135deg, rgba(139, 69, 19, 0.1), rgba(139, 69, 19, 0.08));
+  border: 1px solid rgba(139, 69, 19, 0.2);
+  color: #8b4513;
+}
+
+/* Light theme browser toolbar */
+:root[data-theme="light"] .browser-toolbar {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+/* Light theme tab bar */
+:root[data-theme="light"] .tab-bar {
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+/* Light theme nav buttons */
+:root[data-theme="light"] .arc-nav {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+:root[data-theme="light"] .arc-nav-btn {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+:root[data-theme="light"] .arc-nav-btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #1a1a1a;
+}
+
+:root[data-theme="light"] .arc-nav-btn--active {
+  box-shadow: 0 2px 8px rgba(45, 127, 249, 0.2);
+}
+
+/* Light theme settings button */
+:root[data-theme="light"] .settings-btn {
+  border-color: rgba(0, 0, 0, 0.12);
+}
+
+:root[data-theme="light"] .settings-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+:root[data-theme="light"] .settings-btn:active:not(:disabled) {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* Light theme more button */
+:root[data-theme="light"] .more-button {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+:root[data-theme="light"] .more-button:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #1a1a1a;
+}
+
+/* Light theme round button */
+:root[data-theme="light"] .round-btn {
+  color: rgba(0, 0, 0, 0.6);
+  border-color: transparent;
+}
+
+:root[data-theme="light"] .round-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.08);
+  color: #1a1a1a;
+  border-color: rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+:root[data-theme="light"] .round-btn:active:not(:disabled) {
+  background: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* Light theme tab new button */
+:root[data-theme="light"] .tab-new-btn {
+  background: rgba(0, 0, 0, 0.05);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.6);
+}
+
+:root[data-theme="light"] .tab-new-btn:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.08);
+  color: #1a1a1a;
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+:root[data-theme="light"] .tab-new-btn:active:not(:disabled) {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+:root[data-theme="light"] .tab-new-btn--incognito {
+  background: rgba(139, 69, 19, 0.1);
+  border-color: rgba(139, 69, 19, 0.2);
+}
+
+:root[data-theme="light"] .tab-new-btn--incognito:hover:not(:disabled) {
+  background: rgba(139, 69, 19, 0.15);
+  border-color: rgba(139, 69, 19, 0.3);
+  box-shadow: 0 2px 6px rgba(139, 69, 19, 0.1);
+}
+
+:root[data-theme="light"] .tab-new-btn--incognito:active:not(:disabled) {
+  background: rgba(139, 69, 19, 0.2);
+}

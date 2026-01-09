@@ -15,4 +15,16 @@ electron_1.contextBridge.exposeInMainWorld('arc', {
     updateSettings: (partial) => electron_1.ipcRenderer.invoke('arc:updateSettings', partial),
     clearHistory: () => electron_1.ipcRenderer.invoke('arc:clearHistory'),
     clearFeedback: () => electron_1.ipcRenderer.invoke('arc:clearFeedback'),
+    // Data export/import methods
+    exportData: () => electron_1.ipcRenderer.invoke('arc:exportData'),
+    importData: (data, mode) => electron_1.ipcRenderer.invoke('arc:importData', data, mode),
+    // Keyboard shortcut methods
+    newTab: () => electron_1.ipcRenderer.send('arc:newTab'),
+    newIncognitoTab: () => electron_1.ipcRenderer.send('arc:newIncognitoTab'),
+    closeTab: () => electron_1.ipcRenderer.send('arc:closeTab'),
+    nextTab: () => electron_1.ipcRenderer.send('arc:nextTab'),
+    previousTab: () => electron_1.ipcRenderer.send('arc:previousTab'),
+    focusAddressBar: () => electron_1.ipcRenderer.send('arc:focusAddressBar'),
+    reloadPage: () => electron_1.ipcRenderer.send('arc:reloadPage'),
+    clearData: () => electron_1.ipcRenderer.send('arc:clearData'),
 });

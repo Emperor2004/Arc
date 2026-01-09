@@ -1,9 +1,10 @@
 import { ipcMain, BrowserWindow } from 'electron';
-import { recordVisit, getRecentHistory } from '../core/historyStore';
-import { recordFeedback } from '../core/feedbackStore';
-import { getSettings, updateSettings, clearHistory, clearFeedback } from '../core/settingsStore';
+import { addHistoryEntry, getRecentHistory, clearHistory } from '../core/historyStore';
+import { addFeedback, clearFeedback } from '../core/feedbackStore';
+import { getSettings, updateSettings } from '../core/settingsStore';
 import { getJarvisRecommendations } from '../core/recommender';
 import { PageLoadedPayload, RecommendationFeedback, ArcSettings } from '../core/types';
+import * as dataManager from '../core/dataManager';
 
 
 export const setupIpc = (mainWindow: BrowserWindow) => {
@@ -31,7 +32,7 @@ export const setupIpc = (mainWindow: BrowserWindow) => {
                 return;
             }
             
-            await recordVisit(data.url, data.title);
+            await addHistoryEntry(data.url, data.title);
         } catch (err) {
             console.error('Error in arc:pageLoaded handler:', err);
         }
@@ -57,7 +58,7 @@ export const setupIpc = (mainWindow: BrowserWindow) => {
 
     ipcMain.handle('jarvis:sendFeedback', async (_event, feedback: RecommendationFeedback) => {
         try {
-            await recordFeedback(feedback);
+            addFeedback(feedback.url, feedback.value);
             return { ok: true };
         } catch (err) {
             console.error('Error in jarvis:sendFeedback handler:', err);
@@ -101,6 +102,27 @@ export const setupIpc = (mainWindow: BrowserWindow) => {
         } catch (err) {
             console.error('Error in arc:clearFeedback handler:', err);
             return { ok: false };
+        }
+    });
+
+    // Data export/import handlers
+    ipcMain.handle('arc:exportData', async () => {
+        try {
+            const data = await dataManager.exportData();
+            return { ok: true, data };
+        } catch (err) {
+            console.error('Error in arc:exportData handler:', err);
+            return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+
+    ipcMain.handle('arc:importData', async (_event, data: unknown, mode: 'merge' | 'replace' = 'merge') => {
+        try {
+            await dataManager.importData(data as any, mode);
+            return { ok: true };
+        } catch (err) {
+            console.error('Error in arc:importData handler:', err);
+            return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' };
         }
     });
 };

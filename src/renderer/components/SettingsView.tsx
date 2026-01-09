@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
 import { useSettingsController } from '../hooks/useSettingsController';
+import ThemeSelector from './ThemeSelector';
+import DataExportImport from './DataExportImport';
+import { getThemeManager } from '../../core/themeManager';
 
 export interface SettingsViewProps {}
 
@@ -90,20 +93,7 @@ const SettingsView: React.FC<SettingsViewProps> = () => {
                         <h2>Appearance</h2>
                         <p>Customize the look and feel of Arc</p>
                         
-                        <div className="settings-item">
-                            <label className="settings-label">
-                                <span>Theme</span>
-                                <select 
-                                    className="settings-select"
-                                    value={settings.theme}
-                                    onChange={(e) => handleUpdateSetting('theme', e.target.value as typeof settings.theme)}
-                                >
-                                    <option value="light">Light</option>
-                                    <option value="dark">Dark</option>
-                                    <option value="system">System</option>
-                                </select>
-                            </label>
-                        </div>
+                        <ThemeSelector themeManager={getThemeManager()} />
                     </div>
                 </div>
 
@@ -181,6 +171,8 @@ const SettingsView: React.FC<SettingsViewProps> = () => {
                     <div className="settings-group">
                         <h2>Data</h2>
                         <p>Manage your stored data and preferences</p>
+                        
+                        <DataExportImport onMessage={showMessage} />
                         
                         <div className="settings-item">
                             <div className="settings-action">

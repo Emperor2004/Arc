@@ -1,116 +1,124 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getSettings = getSettings;
 exports.updateSettings = updateSettings;
-exports.clearHistory = clearHistory;
-exports.clearFeedback = clearFeedback;
-const path_1 = require("path");
-const fs_1 = require("fs");
-// Use a local data folder in the project root for dev mode
-const DATA_DIR = (0, path_1.join)(__dirname, '..', '..', 'data');
-const SETTINGS_FILE = (0, path_1.join)(DATA_DIR, 'settings.json');
-// Default settings
+exports.getSetting = getSetting;
+exports.updateSetting = updateSetting;
+exports.resetSettings = resetSettings;
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
+const SETTINGS_FILE = path.join(process.env.APPDATA || process.env.HOME || '.', 'arc-browser', 'data', 'settings.json');
 const DEFAULT_SETTINGS = {
     theme: 'system',
     jarvisEnabled: true,
     useHistoryForRecommendations: true,
-    incognitoEnabled: true
+    incognitoEnabled: true,
+    searchEngine: 'google',
+    tabOrder: [],
+    keyboardShortcutsEnabled: true,
 };
-// ===== Internal Helpers =====
+// Ensure directory exists
+function ensureDir() {
+    const dir = path.dirname(SETTINGS_FILE);
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+}
 /**
- * Load settings from JSON file
+ * Load settings from file
  */
-const loadSettings = () => {
+function loadSettings() {
     try {
-        if ((0, fs_1.existsSync)(SETTINGS_FILE)) {
-            const raw = (0, fs_1.readFileSync)(SETTINGS_FILE, 'utf-8');
-            const data = JSON.parse(raw);
-            // Merge with defaults to handle missing properties
-            return { ...DEFAULT_SETTINGS, ...data };
+        ensureDir();
+        if (fs.existsSync(SETTINGS_FILE)) {
+            const data = fs.readFileSync(SETTINGS_FILE, 'utf-8');
+            return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
         }
     }
-    catch (err) {
-        console.error('Failed to load settings:', err);
+    catch (error) {
+        console.error('Error loading settings:', error);
     }
     return DEFAULT_SETTINGS;
-};
+}
 /**
- * Save settings to JSON file
+ * Save settings to file
  */
-const saveSettings = (settings) => {
+function saveSettings(settings) {
     try {
-        // Ensure data directory exists
-        if (!(0, fs_1.existsSync)(DATA_DIR)) {
-            (0, fs_1.mkdirSync)(DATA_DIR, { recursive: true });
-        }
-        (0, fs_1.writeFileSync)(SETTINGS_FILE, JSON.stringify(settings, null, 2));
+        ensureDir();
+        fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf-8');
     }
-    catch (err) {
-        console.error('Failed to save settings:', err);
-    }
-};
-// ===== Public API =====
-/**
- * Get current settings, returning defaults if file doesn't exist
- */
-async function getSettings() {
-    try {
-        return loadSettings();
-    }
-    catch (err) {
-        console.error('Failed to get settings:', err);
-        return DEFAULT_SETTINGS;
+    catch (error) {
+        console.error('Error saving settings:', error);
     }
 }
 /**
- * Update settings with partial values and return the complete updated settings
+ * Get all settings
  */
-async function updateSettings(partial) {
-    try {
-        const currentSettings = loadSettings();
-        const updatedSettings = { ...currentSettings, ...partial };
-        saveSettings(updatedSettings);
-        console.log('Settings updated:', partial);
-        return updatedSettings;
-    }
-    catch (err) {
-        console.error('Failed to update settings:', err);
-        throw err;
-    }
+function getSettings() {
+    return loadSettings();
 }
 /**
- * Clear all browsing history by delegating to historyStore
+ * Update settings
  */
-async function clearHistory() {
-    try {
-        // Since historyStore doesn't have a clear method, we'll implement it here
-        // by overwriting the history file with an empty array
-        const historyFile = (0, path_1.join)(DATA_DIR, 'history.json');
-        if ((0, fs_1.existsSync)(historyFile)) {
-            (0, fs_1.writeFileSync)(historyFile, JSON.stringify([], null, 2));
-        }
-        console.log('History cleared successfully');
-    }
-    catch (err) {
-        console.error('Failed to clear history:', err);
-        throw err;
-    }
+function updateSettings(updates) {
+    const current = loadSettings();
+    const updated = { ...current, ...updates };
+    saveSettings(updated);
+    return updated;
 }
 /**
- * Clear all Jarvis feedback by delegating to feedbackStore
+ * Get a specific setting
  */
-async function clearFeedback() {
-    try {
-        // Since feedbackStore doesn't have a clear method, we'll implement it here
-        // by overwriting the feedback file with an empty array
-        const feedbackFile = (0, path_1.join)(DATA_DIR, 'feedback.json');
-        if ((0, fs_1.existsSync)(feedbackFile)) {
-            (0, fs_1.writeFileSync)(feedbackFile, JSON.stringify([], null, 2));
-        }
-        console.log('Feedback cleared successfully');
-    }
-    catch (err) {
-        console.error('Failed to clear feedback:', err);
-        throw err;
-    }
+function getSetting(key) {
+    const settings = loadSettings();
+    return settings[key];
+}
+/**
+ * Update a specific setting
+ */
+function updateSetting(key, value) {
+    const settings = loadSettings();
+    settings[key] = value;
+    saveSettings(settings);
+}
+/**
+ * Reset settings to defaults
+ */
+function resetSettings() {
+    saveSettings(DEFAULT_SETTINGS);
+    return DEFAULT_SETTINGS;
 }

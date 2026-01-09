@@ -13,9 +13,12 @@
   },
   "include": [
     "src/main/**/*",
-    "src/core/**/*"
+    "src/core/**/*.ts"
   ],
   "exclude": [
-    "src/renderer/**/*"
+    "src/renderer/**/*",
+    "**/*.test.ts",
+    "**/*.pbt.test.ts",
+    "**/*.integration.test.ts"
   ]
 }

@@ -16,6 +16,20 @@ contextBridge.exposeInMainWorld('arc', {
     updateSettings: (partial: Partial<ArcSettings>) => ipcRenderer.invoke('arc:updateSettings', partial),
     clearHistory: () => ipcRenderer.invoke('arc:clearHistory'),
     clearFeedback: () => ipcRenderer.invoke('arc:clearFeedback'),
+
+    // Data export/import methods
+    exportData: () => ipcRenderer.invoke('arc:exportData'),
+    importData: (data: unknown, mode: 'merge' | 'replace') => ipcRenderer.invoke('arc:importData', data, mode),
+
+    // Keyboard shortcut methods
+    newTab: () => ipcRenderer.send('arc:newTab'),
+    newIncognitoTab: () => ipcRenderer.send('arc:newIncognitoTab'),
+    closeTab: () => ipcRenderer.send('arc:closeTab'),
+    nextTab: () => ipcRenderer.send('arc:nextTab'),
+    previousTab: () => ipcRenderer.send('arc:previousTab'),
+    focusAddressBar: () => ipcRenderer.send('arc:focusAddressBar'),
+    reloadPage: () => ipcRenderer.send('arc:reloadPage'),
+    clearData: () => ipcRenderer.send('arc:clearData'),
 });
 
 

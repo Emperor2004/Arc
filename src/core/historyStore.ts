@@ -1,109 +1,117 @@
-import { join, dirname } from 'path';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { HistoryEntry } from './types';
+import * as fs from 'fs';
+import * as path from 'path';
 
-// Use a local data folder in the project root for dev mode
-// This avoids issues with Electron's app module not being ready
-const DATA_DIR = join(__dirname, '..', '..', 'data');
-const HISTORY_FILE = join(DATA_DIR, 'history.json');
+const HISTORY_FILE = path.join(process.env.APPDATA || process.env.HOME || '.', 'arc-browser', 'data', 'history.json');
 
-// ===== Internal Helpers =====
-
-/**
- * Load history from JSON file
- */
-const loadHistory = (): HistoryEntry[] => {
-  try {
-    if (existsSync(HISTORY_FILE)) {
-      const raw = readFileSync(HISTORY_FILE, 'utf-8');
-      const data = JSON.parse(raw);
-      return Array.isArray(data) ? data : [];
-    }
-  } catch (err) {
-    console.error('Failed to load history:', err);
-  }
-  return [];
-};
-
-/**
- * Save history to JSON file
- */
-const saveHistory = (entries: HistoryEntry[]): void => {
-  try {
-    // Ensure data directory exists
-    if (!existsSync(DATA_DIR)) {
-      mkdirSync(DATA_DIR, { recursive: true });
-    }
-    writeFileSync(HISTORY_FILE, JSON.stringify(entries, null, 2));
-  } catch (err) {
-    console.error('Failed to save history:', err);
-  }
-};
-
-/**
- * Get next available ID (emulates autoincrement)
- */
-const getNextId = (entries: HistoryEntry[]): number => {
-  if (entries.length === 0) return 1;
-  return Math.max(...entries.map(e => e.id)) + 1;
-};
-
-// ===== Public API =====
-
-/**
- * Record a page visit. If URL exists, increment visit_count and update visited_at.
- * Otherwise insert a new entry.
- */
-export async function recordVisit(url: string, title: string | null): Promise<void> {
-  try {
-    // Normalize URL
-    const normalizedUrl = url?.trim();
-    if (!normalizedUrl) {
-      console.warn('recordVisit: empty URL, skipping');
-      return;
-    }
-
-    const entries = loadHistory();
-    const visitedAt = Date.now();
-    const existingIndex = entries.findIndex(e => e.url === normalizedUrl);
-
-    if (existingIndex >= 0) {
-      // Update existing entry
-      entries[existingIndex] = {
-        ...entries[existingIndex],
-        title: title || entries[existingIndex].title,
-        visited_at: visitedAt,
-        visit_count: entries[existingIndex].visit_count + 1
-      };
-    } else {
-      // Insert new entry
-      entries.push({
-        id: getNextId(entries),
-        url: normalizedUrl,
-        title,
-        visited_at: visitedAt,
-        visit_count: 1
-      });
-    }
-
-    saveHistory(entries);
-    console.log(`Recorded visit: ${normalizedUrl}`);
-  } catch (err) {
-    console.error('Failed to record visit:', err);
+// Ensure directory exists
+function ensureDir() {
+  const dir = path.dirname(HISTORY_FILE);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
   }
 }
 
 /**
- * Get recent history entries ordered by visited_at DESC.
+ * Load history from file
  */
-export async function getRecentHistory(limit: number = 50): Promise<HistoryEntry[]> {
+function loadHistory(): HistoryEntry[] {
   try {
-    const entries = loadHistory();
-    return entries
-      .sort((a, b) => b.visited_at - a.visited_at)
-      .slice(0, limit);
-  } catch (err) {
-    console.error('Failed to get recent history:', err);
-    return [];
+    ensureDir();
+    if (fs.existsSync(HISTORY_FILE)) {
+      const data = fs.readFileSync(HISTORY_FILE, 'utf-8');
+      return JSON.parse(data);
+    }
+  } catch (error) {
+    console.error('Error loading history:', error);
   }
+  return [];
+}
+
+/**
+ * Save history to file
+ */
+function saveHistory(history: HistoryEntry[]): void {
+  try {
+    ensureDir();
+    fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2), 'utf-8');
+  } catch (error) {
+    console.error('Error saving history:', error);
+  }
+}
+
+/**
+ * Add or update a history entry
+ */
+export function addHistoryEntry(url: string, title: string): HistoryEntry {
+  const history = loadHistory();
+  const existingIndex = history.findIndex(h => h.url === url);
+
+  if (existingIndex >= 0) {
+    // Update existing entry
+    history[existingIndex].visit_count++;
+    history[existingIndex].visited_at = Date.now();
+    if (title) {
+      history[existingIndex].title = title;
+    }
+  } else {
+    // Add new entry
+    const newEntry: HistoryEntry = {
+      id: history.length > 0 ? Math.max(...history.map(h => h.id)) + 1 : 1,
+      url,
+      title: title || null,
+      visited_at: Date.now(),
+      visit_count: 1,
+    };
+    history.push(newEntry);
+  }
+
+  saveHistory(history);
+  return history[existingIndex >= 0 ? existingIndex : history.length - 1];
+}
+
+/**
+ * Get recent history entries
+ */
+export async function getRecentHistory(limit: number = 200): Promise<HistoryEntry[]> {
+  const history = loadHistory();
+  return history
+    .sort((a, b) => b.visited_at - a.visited_at)
+    .slice(0, limit);
+}
+
+/**
+ * Get all history entries
+ */
+export async function getAllHistory(): Promise<HistoryEntry[]> {
+  return loadHistory();
+}
+
+/**
+ * Clear all history
+ */
+export function clearHistory(): void {
+  saveHistory([]);
+}
+
+/**
+ * Remove a specific history entry
+ */
+export function removeHistoryEntry(url: string): void {
+  const history = loadHistory();
+  const filtered = history.filter(h => h.url !== url);
+  saveHistory(filtered);
+}
+
+/**
+ * Search history by URL or title
+ */
+export async function searchHistory(query: string): Promise<HistoryEntry[]> {
+  const history = loadHistory();
+  const lowerQuery = query.toLowerCase();
+  return history.filter(
+    h =>
+      h.url.toLowerCase().includes(lowerQuery) ||
+      (h.title && h.title.toLowerCase().includes(lowerQuery))
+  );
 }

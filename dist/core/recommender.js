@@ -1,6 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getJarvisRecommendations = getJarvisRecommendations;
+exports.extractDomain = extractDomain;
+exports.extractKeywords = extractKeywords;
+exports.buildFeedbackMap = buildFeedbackMap;
+exports.applyFeedbackToScore = applyFeedbackToScore;
+exports.calculateTemporalWeight = calculateTemporalWeight;
 const historyStore_1 = require("./historyStore");
 const feedbackStore_1 = require("./feedbackStore");
 function extractDomain(url) {
@@ -31,6 +36,36 @@ function buildFeedbackMap(feedback) {
     }
     return feedbackMap;
 }
+/**
+ * Calculate temporal weight based on days since last visit
+ * Uses exponential decay with thresholds at 7, 30, and 90 days
+ *
+ * @param daysSinceVisit - Number of days since last visit
+ * @returns Weight multiplier between 0 and 1
+ */
+function calculateTemporalWeight(daysSinceVisit) {
+    if (daysSinceVisit < 0)
+        return 1.0; // Future dates treated as current
+    // Exponential decay with different rates for different time periods
+    if (daysSinceVisit <= 7) {
+        // Recent visits: minimal decay
+        return 1.0 - (daysSinceVisit / 7) * 0.1; // 1.0 to 0.9
+    }
+    else if (daysSinceVisit <= 30) {
+        // Within a month: moderate decay
+        const daysInRange = daysSinceVisit - 7;
+        return 0.9 - (daysInRange / 23) * 0.3; // 0.9 to 0.6
+    }
+    else if (daysSinceVisit <= 90) {
+        // Within 3 months: steeper decay
+        const daysInRange = daysSinceVisit - 30;
+        return 0.6 - (daysInRange / 60) * 0.4; // 0.6 to 0.2
+    }
+    else {
+        // Older than 3 months: minimal weight
+        return Math.max(0.05, 0.2 * Math.exp(-daysSinceVisit / 180));
+    }
+}
 function applyFeedbackToScore(baseScore, feedbackStats, kind) {
     if (!feedbackStats) {
         return { score: baseScore, feedbackReason: '' };
@@ -39,17 +74,17 @@ function applyFeedbackToScore(baseScore, feedbackStats, kind) {
     let adjustedScore = baseScore;
     let feedbackReason = '';
     // Feedback weighting constants
-    const LIKE_BONUS = 0.3;
-    const DISLIKE_PENALTY = 0.4;
+    const LIKE_BONUS = 0.15; // Reduced to prevent exceeding 1.0
+    const DISLIKE_PENALTY = 0.2; // Reduced to prevent NaN
     const STRONG_DISLIKE_THRESHOLD = 2; // If dislikes >= this, heavily demote
     if (likes > 0 && dislikes === 0) {
         // Pure positive feedback
-        adjustedScore += LIKE_BONUS * likes;
+        adjustedScore += LIKE_BONUS * Math.min(likes, 3); // Cap at 3 likes
         feedbackReason = likes === 1 ? ' (You liked this previously)' : ` (You liked this ${likes} times)`;
     }
     else if (dislikes > 0 && likes === 0) {
         // Pure negative feedback
-        adjustedScore -= DISLIKE_PENALTY * dislikes;
+        adjustedScore -= DISLIKE_PENALTY * Math.min(dislikes, 3); // Cap at 3 dislikes
         // Heavy demotion for strongly disliked content
         if (dislikes >= STRONG_DISLIKE_THRESHOLD) {
             adjustedScore *= 0.1; // Severe penalty
@@ -63,19 +98,23 @@ function applyFeedbackToScore(baseScore, feedbackStats, kind) {
         // Mixed feedback - net effect
         const netLikes = likes - dislikes;
         if (netLikes > 0) {
-            adjustedScore += LIKE_BONUS * netLikes * 0.5; // Reduced bonus due to mixed signals
+            adjustedScore += LIKE_BONUS * Math.min(netLikes, 2) * 0.5; // Reduced bonus due to mixed signals
             feedbackReason = ' (Mixed feedback, mostly positive)';
         }
         else if (netLikes < 0) {
-            adjustedScore -= DISLIKE_PENALTY * Math.abs(netLikes) * 0.5;
+            adjustedScore -= DISLIKE_PENALTY * Math.min(Math.abs(netLikes), 2) * 0.5;
             feedbackReason = ' (Mixed feedback, mostly negative)';
         }
         else {
             feedbackReason = ' (Mixed feedback)';
         }
     }
-    // Ensure score doesn't go negative
-    adjustedScore = Math.max(0, adjustedScore);
+    // Ensure score is in valid range [0, 1]
+    adjustedScore = Math.max(0, Math.min(1, adjustedScore));
+    // Handle NaN
+    if (Number.isNaN(adjustedScore)) {
+        adjustedScore = baseScore;
+    }
     return { score: adjustedScore, feedbackReason };
 }
 async function getJarvisRecommendations(limit = 5) {
@@ -122,6 +161,7 @@ async function getJarvisRecommendations(limit = 5) {
         let baseReason = '';
         const daysSinceVisit = (now - stats.lastVisitedAt) / DAY_MS;
         const normalizedVisits = stats.visitCount / maxVisits;
+        const temporalWeight = calculateTemporalWeight(daysSinceVisit);
         // Pick a representative URL for feedback lookup
         const url = stats.originalUrls[0];
         const urlFeedback = feedbackMap.get(url);
@@ -162,8 +202,21 @@ async function getJarvisRecommendations(limit = 5) {
             }
         }
         if (kind) {
+            // Apply temporal weighting to base score
+            let temporallyWeightedScore = baseScore * temporalWeight;
             // Apply feedback adjustments to score and reason
-            const { score, feedbackReason } = applyFeedbackToScore(baseScore, urlFeedback, kind);
+            const { score, feedbackReason } = applyFeedbackToScore(temporallyWeightedScore, urlFeedback, kind);
+            // Add temporal indicator to reason
+            let temporalIndicator = '';
+            if (daysSinceVisit > 90) {
+                temporalIndicator = ' (Old favorite)';
+            }
+            else if (daysSinceVisit > 30) {
+                temporalIndicator = ' (Haven\'t visited in a while)';
+            }
+            else if (daysSinceVisit > 7) {
+                temporalIndicator = ' (Not visited recently)';
+            }
             // Skip candidates with very low scores after feedback adjustment
             if (score < 0.05) {
                 continue;
@@ -172,7 +225,7 @@ async function getJarvisRecommendations(limit = 5) {
                 id: 0, // Generated on the fly
                 url: url,
                 title: stats.domain, // Use domain as safe title fallback
-                reason: baseReason + feedbackReason,
+                reason: baseReason + feedbackReason + temporalIndicator,
                 score,
                 kind
             });

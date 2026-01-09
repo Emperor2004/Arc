@@ -1,0 +1,88 @@
+.data-export-import {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.export-section,
+.import-section {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background-color: var(--color-background-secondary);
+}
+
+.export-content,
+.import-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.export-content > span:first-child,
+.import-content > span:first-child {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.export-description,
+.import-description {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.import-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.mode-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--color-text);
+}
+
+.mode-label input[type="radio"] {
+  cursor: pointer;
+  width: 1rem;
+  height: 1rem;
+}
+
+.btn-primary {
+  padding: 0.5rem 1rem;
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  white-space: nowrap;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--color-primary-hover);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .export-section,
+  .import-section {
+    background-color: var(--color-background-secondary);
+    border-color: var(--color-border);
+  }
+}

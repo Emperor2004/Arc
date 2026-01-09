@@ -4,7 +4,9 @@ import TabBar from './TabBar';
 import AddressBar from './AddressBar';
 import { useTabsController } from '../hooks/useTabsController';
 import { useSettingsController } from '../hooks/useSettingsController';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useDebug } from '../contexts/DebugContext';
+import { normalizeInput } from '../../core/searchEngineManager';
 
 export interface BrowserShellProps {
     onNavigationComplete?: () => void;
@@ -29,10 +31,50 @@ const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete, onMax
         handleTabSelect, 
         handleTabClose, 
         handleTabTitleUpdate,
-        updateActiveTabUrl
+        updateActiveTabUrl,
+        handleTabReorder
     } = tabsController;
 
     const isIncognitoActive = activeTab?.incognito || false;
+
+    // Expose keyboard shortcut handlers
+    useKeyboardShortcuts({
+        newTab: handleNewTab,
+        newIncognitoTab: handleNewIncognitoTab,
+        closeTab: () => {
+            if (activeTab) {
+                handleTabClose(activeTab.id);
+            }
+        },
+        nextTab: () => {
+            const currentIndex = tabs.findIndex(t => t.id === activeTab?.id);
+            if (currentIndex >= 0 && currentIndex < tabs.length - 1) {
+                handleTabSelect(tabs[currentIndex + 1].id);
+            }
+        },
+        previousTab: () => {
+            const currentIndex = tabs.findIndex(t => t.id === activeTab?.id);
+            if (currentIndex > 0) {
+                handleTabSelect(tabs[currentIndex - 1].id);
+            }
+        },
+        focusAddressBar: () => {
+            const addressBar = document.querySelector('input[type="text"]') as HTMLInputElement;
+            if (addressBar) {
+                addressBar.focus();
+                addressBar.select();
+                logAction('Address bar focused');
+            }
+        },
+        reloadPage: handleReload,
+        clearData: () => {
+            if (window.arc) {
+                window.arc.clearHistory?.();
+                window.arc.clearFeedback?.();
+                logAction('Data cleared');
+            }
+        },
+    });
 
     // Update debug state when active tab changes
     React.useEffect(() => {
@@ -47,9 +89,10 @@ const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete, onMax
 
     const handleNavigate = () => {
         let targetUrl = url;
-        if (!/^https?:\/\//i.test(targetUrl)) {
-            targetUrl = `https://${targetUrl}`;
-        }
+        
+        // Use search engine manager to normalize input
+        const searchEngine = settings.searchEngine || 'google';
+        targetUrl = normalizeInput(targetUrl, searchEngine as any);
 
         if (window.arc && activeTab) {
             window.arc.navigate(targetUrl);
@@ -118,6 +161,7 @@ const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete, onMax
                 onNewIncognitoTab={handleNewIncognitoTab}
                 onTabSelect={handleTabSelect}
                 onTabClose={handleTabClose}
+                onTabReorder={handleTabReorder}
                 incognitoEnabled={settings.incognitoEnabled}
             />
 

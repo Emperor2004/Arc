@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "url": "https://github.com",
+    "title": "GitHub",
+    "visited_at": 1704067200000,
+    "visit_count": 50
+  },
+  {
+    "id": 2,
+    "url": "https://stackoverflow.com",
+    "title": "Stack Overflow",
+    "visited_at": 1704153600000,
+    "visit_count": 30
+  },
+  {
+    "id": 3,
+    "url": "https://developer.mozilla.org",
+    "title": "MDN Web Docs",
+    "visited_at": 1704240000000,
+    "visit_count": 25
+  },
+  {
+    "id": 4,
+    "url": "https://example.com",
+    "title": "Example",
+    "visited_at": 1703980800000,
+    "visit_count": 5
+  }
+]

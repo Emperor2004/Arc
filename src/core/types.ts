@@ -38,6 +38,19 @@ export interface ArcSettings {
     jarvisEnabled: boolean;
     useHistoryForRecommendations: boolean;
     incognitoEnabled: boolean;
+    searchEngine?: 'google' | 'duckduckgo' | 'bing' | 'custom';
+    tabOrder?: string[];
+    keyboardShortcutsEnabled?: boolean;
+}
+
+export interface Bookmark {
+    id: string;
+    url: string;
+    title: string;
+    createdAt: number;
+    updatedAt: number;
+    tags?: string[];
+    favicon?: string;
 }
 
 export interface Tab {

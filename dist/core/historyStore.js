@@ -1,107 +1,145 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.recordVisit = recordVisit;
+exports.addHistoryEntry = addHistoryEntry;
 exports.getRecentHistory = getRecentHistory;
-const path_1 = require("path");
-const fs_1 = require("fs");
-// Use a local data folder in the project root for dev mode
-// This avoids issues with Electron's app module not being ready
-const DATA_DIR = (0, path_1.join)(__dirname, '..', '..', 'data');
-const HISTORY_FILE = (0, path_1.join)(DATA_DIR, 'history.json');
-// ===== Internal Helpers =====
-/**
- * Load history from JSON file
- */
-const loadHistory = () => {
-    try {
-        if ((0, fs_1.existsSync)(HISTORY_FILE)) {
-            const raw = (0, fs_1.readFileSync)(HISTORY_FILE, 'utf-8');
-            const data = JSON.parse(raw);
-            return Array.isArray(data) ? data : [];
-        }
-    }
-    catch (err) {
-        console.error('Failed to load history:', err);
-    }
-    return [];
-};
-/**
- * Save history to JSON file
- */
-const saveHistory = (entries) => {
-    try {
-        // Ensure data directory exists
-        if (!(0, fs_1.existsSync)(DATA_DIR)) {
-            (0, fs_1.mkdirSync)(DATA_DIR, { recursive: true });
-        }
-        (0, fs_1.writeFileSync)(HISTORY_FILE, JSON.stringify(entries, null, 2));
-    }
-    catch (err) {
-        console.error('Failed to save history:', err);
-    }
-};
-/**
- * Get next available ID (emulates autoincrement)
- */
-const getNextId = (entries) => {
-    if (entries.length === 0)
-        return 1;
-    return Math.max(...entries.map(e => e.id)) + 1;
-};
-// ===== Public API =====
-/**
- * Record a page visit. If URL exists, increment visit_count and update visited_at.
- * Otherwise insert a new entry.
- */
-async function recordVisit(url, title) {
-    try {
-        // Normalize URL
-        const normalizedUrl = url?.trim();
-        if (!normalizedUrl) {
-            console.warn('recordVisit: empty URL, skipping');
-            return;
-        }
-        const entries = loadHistory();
-        const visitedAt = Date.now();
-        const existingIndex = entries.findIndex(e => e.url === normalizedUrl);
-        if (existingIndex >= 0) {
-            // Update existing entry
-            entries[existingIndex] = {
-                ...entries[existingIndex],
-                title: title || entries[existingIndex].title,
-                visited_at: visitedAt,
-                visit_count: entries[existingIndex].visit_count + 1
-            };
-        }
-        else {
-            // Insert new entry
-            entries.push({
-                id: getNextId(entries),
-                url: normalizedUrl,
-                title,
-                visited_at: visitedAt,
-                visit_count: 1
-            });
-        }
-        saveHistory(entries);
-        console.log(`Recorded visit: ${normalizedUrl}`);
-    }
-    catch (err) {
-        console.error('Failed to record visit:', err);
+exports.getAllHistory = getAllHistory;
+exports.clearHistory = clearHistory;
+exports.removeHistoryEntry = removeHistoryEntry;
+exports.searchHistory = searchHistory;
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
+const HISTORY_FILE = path.join(process.env.APPDATA || process.env.HOME || '.', 'arc-browser', 'data', 'history.json');
+// Ensure directory exists
+function ensureDir() {
+    const dir = path.dirname(HISTORY_FILE);
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
     }
 }
 /**
- * Get recent history entries ordered by visited_at DESC.
+ * Load history from file
  */
-async function getRecentHistory(limit = 50) {
+function loadHistory() {
     try {
-        const entries = loadHistory();
-        return entries
-            .sort((a, b) => b.visited_at - a.visited_at)
-            .slice(0, limit);
+        ensureDir();
+        if (fs.existsSync(HISTORY_FILE)) {
+            const data = fs.readFileSync(HISTORY_FILE, 'utf-8');
+            return JSON.parse(data);
+        }
     }
-    catch (err) {
-        console.error('Failed to get recent history:', err);
-        return [];
+    catch (error) {
+        console.error('Error loading history:', error);
     }
+    return [];
+}
+/**
+ * Save history to file
+ */
+function saveHistory(history) {
+    try {
+        ensureDir();
+        fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2), 'utf-8');
+    }
+    catch (error) {
+        console.error('Error saving history:', error);
+    }
+}
+/**
+ * Add or update a history entry
+ */
+function addHistoryEntry(url, title) {
+    const history = loadHistory();
+    const existingIndex = history.findIndex(h => h.url === url);
+    if (existingIndex >= 0) {
+        // Update existing entry
+        history[existingIndex].visit_count++;
+        history[existingIndex].visited_at = Date.now();
+        if (title) {
+            history[existingIndex].title = title;
+        }
+    }
+    else {
+        // Add new entry
+        const newEntry = {
+            id: history.length > 0 ? Math.max(...history.map(h => h.id)) + 1 : 1,
+            url,
+            title: title || null,
+            visited_at: Date.now(),
+            visit_count: 1,
+        };
+        history.push(newEntry);
+    }
+    saveHistory(history);
+    return history[existingIndex >= 0 ? existingIndex : history.length - 1];
+}
+/**
+ * Get recent history entries
+ */
+async function getRecentHistory(limit = 200) {
+    const history = loadHistory();
+    return history
+        .sort((a, b) => b.visited_at - a.visited_at)
+        .slice(0, limit);
+}
+/**
+ * Get all history entries
+ */
+async function getAllHistory() {
+    return loadHistory();
+}
+/**
+ * Clear all history
+ */
+function clearHistory() {
+    saveHistory([]);
+}
+/**
+ * Remove a specific history entry
+ */
+function removeHistoryEntry(url) {
+    const history = loadHistory();
+    const filtered = history.filter(h => h.url !== url);
+    saveHistory(filtered);
+}
+/**
+ * Search history by URL or title
+ */
+async function searchHistory(query) {
+    const history = loadHistory();
+    const lowerQuery = query.toLowerCase();
+    return history.filter(h => h.url.toLowerCase().includes(lowerQuery) ||
+        (h.title && h.title.toLowerCase().includes(lowerQuery)));
 }

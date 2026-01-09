@@ -1,7 +1,9 @@
 import React from 'react';
+import BookmarkButton from './BookmarkButton';
 
 export interface AddressBarProps {
     url: string;
+    title?: string;
     onUrlChange: (url: string) => void;
     onNavigate: () => void;
     onBack: () => void;
@@ -12,10 +14,13 @@ export interface AddressBarProps {
     canGoBack?: boolean;
     canGoForward?: boolean;
     hasActiveTab?: boolean;
+    onBookmarkAdded?: () => void;
+    onBookmarkRemoved?: () => void;
 }
 
 const AddressBar: React.FC<AddressBarProps> = ({
     url,
+    title,
     onUrlChange,
     onNavigate,
     onBack,
@@ -25,7 +30,9 @@ const AddressBar: React.FC<AddressBarProps> = ({
     isMaximized,
     canGoBack = false,
     canGoForward = false,
-    hasActiveTab = true
+    hasActiveTab = true,
+    onBookmarkAdded,
+    onBookmarkRemoved,
 }) => {
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
@@ -70,6 +77,12 @@ const AddressBar: React.FC<AddressBarProps> = ({
                     onChange={(e) => onUrlChange(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Search or enter URL"
+                />
+                <BookmarkButton
+                    url={url}
+                    title={title}
+                    onBookmarkAdded={onBookmarkAdded}
+                    onBookmarkRemoved={onBookmarkRemoved}
                 />
                 <button 
                     className="btn-primary" 

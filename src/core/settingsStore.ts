@@ -1,117 +1,93 @@
-import { join } from 'path';
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { ArcSettings } from './types';
-import { recordVisit, getRecentHistory } from './historyStore';
-import { getAllFeedback } from './feedbackStore';
+import * as fs from 'fs';
+import * as path from 'path';
 
-// Use a local data folder in the project root for dev mode
-const DATA_DIR = join(__dirname, '..', '..', 'data');
-const SETTINGS_FILE = join(DATA_DIR, 'settings.json');
+const SETTINGS_FILE = path.join(process.env.APPDATA || process.env.HOME || '.', 'arc-browser', 'data', 'settings.json');
 
-// Default settings
 const DEFAULT_SETTINGS: ArcSettings = {
-    theme: 'system',
-    jarvisEnabled: true,
-    useHistoryForRecommendations: true,
-    incognitoEnabled: true
+  theme: 'system',
+  jarvisEnabled: true,
+  useHistoryForRecommendations: true,
+  incognitoEnabled: true,
+  searchEngine: 'google',
+  tabOrder: [],
+  keyboardShortcutsEnabled: true,
 };
 
-// ===== Internal Helpers =====
-
-/**
- * Load settings from JSON file
- */
-const loadSettings = (): ArcSettings => {
-    try {
-        if (existsSync(SETTINGS_FILE)) {
-            const raw = readFileSync(SETTINGS_FILE, 'utf-8');
-            const data = JSON.parse(raw);
-            // Merge with defaults to handle missing properties
-            return { ...DEFAULT_SETTINGS, ...data };
-        }
-    } catch (err) {
-        console.error('Failed to load settings:', err);
-    }
-    return DEFAULT_SETTINGS;
-};
-
-/**
- * Save settings to JSON file
- */
-const saveSettings = (settings: ArcSettings): void => {
-    try {
-        // Ensure data directory exists
-        if (!existsSync(DATA_DIR)) {
-            mkdirSync(DATA_DIR, { recursive: true });
-        }
-        writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2));
-    } catch (err) {
-        console.error('Failed to save settings:', err);
-    }
-};
-
-// ===== Public API =====
-
-/**
- * Get current settings, returning defaults if file doesn't exist
- */
-export async function getSettings(): Promise<ArcSettings> {
-    try {
-        return loadSettings();
-    } catch (err) {
-        console.error('Failed to get settings:', err);
-        return DEFAULT_SETTINGS;
-    }
+// Ensure directory exists
+function ensureDir() {
+  const dir = path.dirname(SETTINGS_FILE);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
 }
 
 /**
- * Update settings with partial values and return the complete updated settings
+ * Load settings from file
  */
-export async function updateSettings(partial: Partial<ArcSettings>): Promise<ArcSettings> {
-    try {
-        const currentSettings = loadSettings();
-        const updatedSettings = { ...currentSettings, ...partial };
-        saveSettings(updatedSettings);
-        console.log('Settings updated:', partial);
-        return updatedSettings;
-    } catch (err) {
-        console.error('Failed to update settings:', err);
-        throw err;
+function loadSettings(): ArcSettings {
+  try {
+    ensureDir();
+    if (fs.existsSync(SETTINGS_FILE)) {
+      const data = fs.readFileSync(SETTINGS_FILE, 'utf-8');
+      return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
     }
+  } catch (error) {
+    console.error('Error loading settings:', error);
+  }
+  return DEFAULT_SETTINGS;
 }
 
 /**
- * Clear all browsing history by delegating to historyStore
+ * Save settings to file
  */
-export async function clearHistory(): Promise<void> {
-    try {
-        // Since historyStore doesn't have a clear method, we'll implement it here
-        // by overwriting the history file with an empty array
-        const historyFile = join(DATA_DIR, 'history.json');
-        if (existsSync(historyFile)) {
-            writeFileSync(historyFile, JSON.stringify([], null, 2));
-        }
-        console.log('History cleared successfully');
-    } catch (err) {
-        console.error('Failed to clear history:', err);
-        throw err;
-    }
+function saveSettings(settings: ArcSettings): void {
+  try {
+    ensureDir();
+    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf-8');
+  } catch (error) {
+    console.error('Error saving settings:', error);
+  }
 }
 
 /**
- * Clear all Jarvis feedback by delegating to feedbackStore
+ * Get all settings
  */
-export async function clearFeedback(): Promise<void> {
-    try {
-        // Since feedbackStore doesn't have a clear method, we'll implement it here
-        // by overwriting the feedback file with an empty array
-        const feedbackFile = join(DATA_DIR, 'feedback.json');
-        if (existsSync(feedbackFile)) {
-            writeFileSync(feedbackFile, JSON.stringify([], null, 2));
-        }
-        console.log('Feedback cleared successfully');
-    } catch (err) {
-        console.error('Failed to clear feedback:', err);
-        throw err;
-    }
+export function getSettings(): ArcSettings {
+  return loadSettings();
+}
+
+/**
+ * Update settings
+ */
+export function updateSettings(updates: Partial<ArcSettings>): ArcSettings {
+  const current = loadSettings();
+  const updated = { ...current, ...updates };
+  saveSettings(updated);
+  return updated;
+}
+
+/**
+ * Get a specific setting
+ */
+export function getSetting<K extends keyof ArcSettings>(key: K): ArcSettings[K] {
+  const settings = loadSettings();
+  return settings[key];
+}
+
+/**
+ * Update a specific setting
+ */
+export function updateSetting<K extends keyof ArcSettings>(key: K, value: ArcSettings[K]): void {
+  const settings = loadSettings();
+  settings[key] = value;
+  saveSettings(settings);
+}
+
+/**
+ * Reset settings to defaults
+ */
+export function resetSettings(): ArcSettings {
+  saveSettings(DEFAULT_SETTINGS);
+  return DEFAULT_SETTINGS;
 }

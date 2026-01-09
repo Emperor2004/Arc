@@ -1,3 +1,7 @@
+/* Import theme definitions */
+@import './themes.css';
+
+/* Default to dark theme */
 :root {
   --bg-dark: #0f1115;
   --glass-bg: rgba(255, 255, 255, 0.08);
@@ -208,10 +212,16 @@ body {
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  transition: background-color 0.2s ease;
 }
 
 .tab-list::-webkit-scrollbar {
   display: none;
+}
+
+.tab-list--drag-over {
+  background-color: rgba(45, 127, 249, 0.1);
+  border-radius: var(--radius-sm);
 }
 
 .tab {
@@ -227,6 +237,13 @@ body {
   min-width: 120px;
   max-width: 200px;
   position: relative;
+}
+
+.tab--dragging {
+  opacity: 0.5;
+  background: rgba(45, 127, 249, 0.2);
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(45, 127, 249, 0.3);
 }
 
 .tab:hover:not(.tab--disabled) {

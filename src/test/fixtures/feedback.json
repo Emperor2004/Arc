@@ -1,0 +1,20 @@
+[
+  {
+    "id": 1,
+    "url": "https://github.com",
+    "value": "like",
+    "created_at": 1704067200000
+  },
+  {
+    "id": 2,
+    "url": "https://stackoverflow.com",
+    "value": "like",
+    "created_at": 1704153600000
+  },
+  {
+    "id": 3,
+    "url": "https://example.com",
+    "value": "dislike",
+    "created_at": 1703980800000
+  }
+]
