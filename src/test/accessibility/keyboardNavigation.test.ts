@@ -35,7 +35,7 @@ describe('Keyboard Navigation', () => {
       value: 'win32'
     });
 
-    const { container: testContainer } = render(<App />);
+    const { container: testContainer } = render(React.createElement(App));
     container = testContainer;
   });
 
