@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { addBookmark, removeBookmark, isBookmarked } from '../../core/bookmarkStore';
 
 export interface BookmarkButtonProps {
     url: string;
@@ -26,8 +25,10 @@ const BookmarkButton: React.FC<BookmarkButtonProps> = ({
             }
 
             try {
-                const bookmarked = await isBookmarked(url);
-                setIsBookmarkedState(bookmarked);
+                if (window.arc && window.arc.isBookmarked) {
+                    const result = await window.arc.isBookmarked(url);
+                    setIsBookmarkedState(result.bookmarked || false);
+                }
             } catch (error) {
                 console.error('Error checking bookmark status:', error);
             }
@@ -37,22 +38,25 @@ const BookmarkButton: React.FC<BookmarkButtonProps> = ({
     }, [url]);
 
     const handleBookmarkClick = async () => {
-        if (!url) return;
+        if (!url || !window.arc) return;
 
         setIsLoading(true);
         try {
             if (isBookmarkedState) {
                 // Remove bookmark
-                // Note: We need to find the bookmark by URL first
-                // This is a simplified implementation
-                setIsBookmarkedState(false);
-                onBookmarkRemoved?.();
+                if (window.arc.removeBookmark) {
+                    await window.arc.removeBookmark(url);
+                    setIsBookmarkedState(false);
+                    onBookmarkRemoved?.();
+                }
             } else {
                 // Add bookmark
-                const bookmarkTitle = title || new URL(url).hostname;
-                addBookmark(url, bookmarkTitle);
-                setIsBookmarkedState(true);
-                onBookmarkAdded?.();
+                if (window.arc.addBookmark) {
+                    const bookmarkTitle = title || new URL(url).hostname;
+                    await window.arc.addBookmark(url, bookmarkTitle);
+                    setIsBookmarkedState(true);
+                    onBookmarkAdded?.();
+                }
             }
         } catch (error) {
             console.error('Error toggling bookmark:', error);

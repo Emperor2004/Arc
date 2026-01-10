@@ -13,20 +13,23 @@ export const useSettingsController = (): SettingsController => {
         theme: 'dark',
         jarvisEnabled: true,
         useHistoryForRecommendations: true,
-        incognitoEnabled: true
+        incognitoEnabled: true,
+        searchEngine: 'google',
+        tabOrder: []
     });
     const [loading, setLoading] = useState(true);
 
     const loadSettings = async () => {
         try {
             setLoading(true);
-            if (window.arc && window.arc.getSettings) {
-                const loadedSettings = await window.arc.getSettings();
-                setSettings(loadedSettings);
+            if (typeof window !== 'undefined' && (window as any).arc && (window as any).arc.getSettings) {
+                const loadedSettings = await (window as any).arc.getSettings();
+                setSettings(prev => ({ ...prev, ...loadedSettings }));
+            } else {
+                setLoading(false);
             }
         } catch (error) {
             console.error('Failed to load settings:', error);
-        } finally {
             setLoading(false);
         }
     };
@@ -36,9 +39,11 @@ export const useSettingsController = (): SettingsController => {
         value: ArcSettings[K]
     ) => {
         try {
-            if (window.arc && window.arc.updateSettings) {
-                const updatedSettings = await window.arc.updateSettings({ [key]: value });
-                setSettings(updatedSettings);
+            if (typeof window !== 'undefined' && (window as any).arc && (window as any).arc.updateSettings) {
+                const result = await (window as any).arc.updateSettings({ [key]: value });
+                if (result && result.ok !== false) {
+                    setSettings(prev => ({ ...prev, [key]: value }));
+                }
             }
         } catch (error) {
             console.error('Failed to update settings:', error);

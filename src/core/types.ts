@@ -22,6 +22,12 @@ export interface Recommendation {
     reason: string;          // short human explanation
     score: number;           // numeric ranking
     kind: RecommendationKind;
+    personalizedScores?: {   // Optional personalization breakdown
+        frequency: number;
+        recency: number;
+        feedback: number;
+        combined: number;
+    };
 }
 
 export type FeedbackValue = 'like' | 'dislike';
@@ -41,6 +47,21 @@ export interface ArcSettings {
     searchEngine?: 'google' | 'duckduckgo' | 'bing' | 'custom';
     tabOrder?: string[];
     keyboardShortcutsEnabled?: boolean;
+    restorePreviousSession?: boolean;
+    // Personalization settings
+    recencyWeight?: number;
+    frequencyWeight?: number;
+    feedbackWeight?: number;
+    minScore?: number;
+    maxRecommendations?: number;
+    ollamaModel?: string;
+    ollamaEnabled?: boolean;
+    // Accessibility settings
+    reducedMotion?: boolean;
+    highContrast?: boolean;
+    fontSize?: 'small' | 'medium' | 'large' | 'extra-large';
+    focusIndicators?: boolean;
+    screenReaderOptimizations?: boolean;
 }
 
 export interface Bookmark {
@@ -59,4 +80,13 @@ export interface Tab {
     url: string;
     isActive: boolean;
     incognito?: boolean;
+}
+
+export interface TabGroup {
+    id: string;
+    name: string;
+    color: 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'gray';
+    tabIds: string[];
+    isCollapsed: boolean;
+    createdAt: number;
 }

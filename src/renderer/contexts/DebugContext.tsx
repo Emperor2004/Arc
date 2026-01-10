@@ -21,7 +21,20 @@ const DebugContext = createContext<DebugContextType | undefined>(undefined);
 export const useDebug = () => {
   const context = useContext(DebugContext);
   if (!context) {
-    throw new Error('useDebug must be used within a DebugProvider');
+    // Return safe defaults instead of throwing
+    return {
+      debugState: {
+        section: 'browser' as const,
+        layoutMode: 'normal' as const,
+        activeTabId: null,
+        isIncognito: false,
+        jarvisStatus: 'idle' as const,
+        lastAction: 'App initialized',
+        timestamp: Date.now()
+      },
+      updateDebugState: () => {},
+      logAction: () => {}
+    };
   }
   return context;
 };

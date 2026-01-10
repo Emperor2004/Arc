@@ -25,9 +25,16 @@ class MockKeyboardEvent {
 
 describe('KeyboardShortcutManager', () => {
   let manager: KeyboardShortcutManager;
+  let consoleWarnSpy: any;
 
   beforeEach(() => {
     manager = new KeyboardShortcutManager('win32');
+    // Suppress console.warn for duplicate shortcut warnings in tests
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleWarnSpy.mockRestore();
   });
 
   describe('registerShortcut', () => {

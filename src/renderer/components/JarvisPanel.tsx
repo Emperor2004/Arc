@@ -89,23 +89,30 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
     const statusUI = getStatusUI();
 
     return (
-        <div className="glass-card jarvis-panel" style={{
-            padding: '24px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '16px',
-            overflow: 'hidden'
-        }}>
+        <div className="glass-card jarvis-panel" 
+             role="region" 
+             aria-labelledby="jarvis-heading"
+             aria-describedby="jarvis-description"
+             style={{
+                padding: '24px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                overflow: 'hidden'
+            }}>
             {/* Header */}
             <div>
                 <div className="jarvis-header" style={{ marginBottom: '4px', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div className="status-dot" style={{ background: statusUI.color, boxShadow: `0 0 8px ${statusUI.color}` }}></div>
+                        <div className="status-dot" 
+                             style={{ background: statusUI.color, boxShadow: `0 0 8px ${statusUI.color}` }}
+                             role="status"
+                             aria-label={`Jarvis status: ${statusUI.text}`}></div>
                         <span style={{ fontWeight: 600, color: statusUI.color, letterSpacing: '2px', fontSize: '12px' }}>
                             {statusUI.text}
                         </span>
                     </div>
-                    <div style={{ display: 'flex', gap: '4px' }}>
+                    <div style={{ display: 'flex', gap: '4px' }} role="toolbar" aria-label="Jarvis controls">
                         {/* Refresh Button */}
                         <button
                             onClick={() => {
@@ -115,6 +122,7 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                             className="icon-button icon-button--glass"
                             type="button"
                             title="Refresh recommendations"
+                            aria-label="Refresh recommendations"
                         >
                             ↻
                         </button>
@@ -128,14 +136,15 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                                 className="icon-button icon-button--glass"
                                 type="button"
                                 title={isMaximized ? "Restore Jarvis" : "Maximize Jarvis"}
+                                aria-label={isMaximized ? "Restore Jarvis panel" : "Maximize Jarvis panel"}
                             >
                                 ⤢
                             </button>
                         )}
                     </div>
                 </div>
-                <h2 style={{ margin: 0, fontSize: '24px', fontWeight: 700 }}>Jarvis</h2>
-                <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                <h2 id="jarvis-heading" style={{ margin: 0, fontSize: '24px', fontWeight: 700 }}>Jarvis</h2>
+                <p id="jarvis-description" style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>
                     Your Arc discovery assistant
                 </p>
             </div>
@@ -150,13 +159,19 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                 gap: '12px',
                 paddingBottom: '10px',
                 borderBottom: '1px solid var(--glass-border)'
-            }}>
+            }}
+            role="region"
+            aria-labelledby="recommendations-heading"
+            aria-live="polite">
+                <h3 id="recommendations-heading" className="sr-only">Recommendations</h3>
                 {status === 'thinking' && recommendations.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}>
+                    <div style={{ textAlign: 'center', padding: '20px', color: 'var(--text-secondary)' }}
+                         role="status" aria-live="polite">
                         Finding gems...
                     </div>
                 ) : error ? (
-                    <div style={{ textAlign: 'center', padding: '20px', color: 'var(--danger)' }}>
+                    <div style={{ textAlign: 'center', padding: '20px', color: 'var(--danger)' }}
+                         role="alert" aria-live="assertive">
                         {error}
                     </div>
                 ) : recommendations.length === 0 ? (
@@ -170,7 +185,8 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontSize: '20px'
-                        }}>
+                        }}
+                        aria-hidden="true">
                             ✨
                         </div>
                         <p style={{ fontSize: '13px', lineHeight: '1.5', color: 'var(--text-secondary)', margin: 0 }}>
@@ -178,16 +194,20 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                         </p>
                     </div>
                 ) : (
-                    recommendations.map(rec => (
-                        <div key={rec.id || rec.url} style={{
-                            background: 'rgba(255, 255, 255, 0.05)',
-                            borderRadius: 'var(--radius-md)',
-                            padding: '16px',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '8px',
-                            backdropFilter: 'blur(10px)'
-                        }}>
+                    recommendations.map((rec, index) => (
+                        <div key={rec.id || rec.url} 
+                             style={{
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                borderRadius: 'var(--radius-md)',
+                                padding: '16px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '8px',
+                                backdropFilter: 'blur(10px)'
+                             }}
+                             role="article"
+                             aria-labelledby={`rec-title-${index}`}
+                             aria-describedby={`rec-reason-${index}`}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <span style={{
                                     fontSize: '10px',
@@ -197,18 +217,68 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                                     padding: '2px 8px',
                                     borderRadius: '4px',
                                     color: 'var(--accent)'
-                                }}>
+                                }}
+                                aria-label={`Recommendation type: ${getKindBadge(rec.kind)}`}>
                                     {getKindBadge(rec.kind)}
+                                </span>
+                                <span style={{
+                                    fontSize: '11px',
+                                    color: 'var(--text-secondary)',
+                                    fontWeight: 600
+                                }}
+                                aria-label={`Confidence score: ${Math.round(rec.score * 100)} percent`}>
+                                    {Math.round(rec.score * 100)}%
                                 </span>
                             </div>
 
-                            <div style={{ fontWeight: 600, fontSize: '14px', wordBreak: 'break-all' }}>
+                            <div id={`rec-title-${index}`} style={{ fontWeight: 600, fontSize: '14px', wordBreak: 'break-all' }}>
                                 {rec.title || rec.url}
                             </div>
 
-                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                            <div id={`rec-reason-${index}`} style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: '1.4' }}>
                                 {rec.reason}
                             </div>
+
+                            {/* Weight indicators - show if personalized scores are available */}
+                            {rec.personalizedScores && (
+                                <div style={{
+                                    display: 'flex',
+                                    gap: '4px',
+                                    marginTop: '4px',
+                                    flexWrap: 'wrap'
+                                }}>
+                                    <div style={{
+                                        fontSize: '9px',
+                                        padding: '2px 6px',
+                                        borderRadius: '8px',
+                                        background: 'rgba(59, 130, 246, 0.2)',
+                                        color: '#60a5fa',
+                                        border: '1px solid rgba(59, 130, 246, 0.3)'
+                                    }}>
+                                        F: {Math.round(rec.personalizedScores.frequency * 100)}%
+                                    </div>
+                                    <div style={{
+                                        fontSize: '9px',
+                                        padding: '2px 6px',
+                                        borderRadius: '8px',
+                                        background: 'rgba(34, 197, 94, 0.2)',
+                                        color: '#4ade80',
+                                        border: '1px solid rgba(34, 197, 94, 0.3)'
+                                    }}>
+                                        R: {Math.round(rec.personalizedScores.recency * 100)}%
+                                    </div>
+                                    <div style={{
+                                        fontSize: '9px',
+                                        padding: '2px 6px',
+                                        borderRadius: '8px',
+                                        background: 'rgba(168, 85, 247, 0.2)',
+                                        color: '#a78bfa',
+                                        border: '1px solid rgba(168, 85, 247, 0.3)'
+                                    }}>
+                                        FB: {Math.round(rec.personalizedScores.feedback * 100)}%
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Feedback indicator */}
                             {feedback[rec.url] && (
@@ -225,7 +295,7 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                             )}
 
                             {/* Action buttons */}
-                            <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                            <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }} role="group" aria-label="Recommendation actions">
                                 <button
                                     className="btn-secondary"
                                     style={{
@@ -240,6 +310,8 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                                         logAction(`Liked recommendation: ${rec.title || rec.url}`);
                                     }}
                                     disabled={!!feedback[rec.url]}
+                                    aria-label={`Like recommendation: ${rec.title || rec.url}`}
+                                    aria-pressed={feedback[rec.url] === 'like'}
                                 >
                                     👍
                                 </button>
@@ -257,6 +329,8 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                                         logAction(`Disliked recommendation: ${rec.title || rec.url}`);
                                     }}
                                     disabled={!!feedback[rec.url]}
+                                    aria-label={`Dislike recommendation: ${rec.title || rec.url}`}
+                                    aria-pressed={feedback[rec.url] === 'dislike'}
                                 >
                                     👎
                                 </button>
@@ -271,6 +345,7 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                                         handleOpen(rec.url);
                                         logAction(`Opened recommendation: ${rec.title || rec.url}`);
                                     }}
+                                    aria-label={`Open recommendation: ${rec.title || rec.url}`}
                                 >
                                     Open
                                 </button>
@@ -287,23 +362,30 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '12px'
-            }}>
+            }}
+            role="log"
+            aria-labelledby="chat-heading"
+            aria-live="polite">
+                <h3 id="chat-heading" className="sr-only">Chat with Jarvis</h3>
                 {messages.length === 0 && (
                     <div style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px', marginTop: 'auto' }}>
                         Chat with Jarvis...
                     </div>
                 )}
                 {messages.map((msg, i) => (
-                    <div key={i} style={{
-                        alignSelf: msg.from === 'user' ? 'flex-end' : 'flex-start',
-                        background: msg.from === 'user' ? 'var(--accent)' : 'rgba(255,255,255,0.1)',
-                        color: 'white',
-                        padding: '8px 12px',
-                        borderRadius: '12px',
-                        fontSize: '13px',
-                        maxWidth: '85%',
-                        lineHeight: '1.4'
-                    }}>
+                    <div key={i} 
+                         style={{
+                            alignSelf: msg.from === 'user' ? 'flex-end' : 'flex-start',
+                            background: msg.from === 'user' ? 'var(--accent)' : 'rgba(255,255,255,0.1)',
+                            color: 'white',
+                            padding: '8px 12px',
+                            borderRadius: '12px',
+                            fontSize: '13px',
+                            maxWidth: '85%',
+                            lineHeight: '1.4'
+                         }}
+                         role="article"
+                         aria-label={`Message from ${msg.from === 'user' ? 'you' : 'Jarvis'}`}>
                         {msg.text}
                     </div>
                 ))}
@@ -311,8 +393,10 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
             </div>
 
             {/* Input Area */}
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }} role="group" aria-label="Chat input">
+                <label htmlFor="jarvis-input" className="sr-only">Message to Jarvis</label>
                 <textarea
+                    id="jarvis-input"
                     className="pill-input"
                     placeholder="Ask Jarvis... (Shift+Enter for new line)"
                     style={{ 
@@ -329,7 +413,11 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                     onKeyDown={handleKeyDown}
                     disabled={status === 'thinking'}
                     rows={1}
+                    aria-describedby="jarvis-input-help"
                 />
+                <div id="jarvis-input-help" className="sr-only">
+                    Type your message to Jarvis. Press Enter to send, or Shift+Enter for a new line.
+                </div>
                 <button 
                     className="btn-primary" 
                     onClick={() => {
@@ -338,6 +426,7 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                     }} 
                     style={{ padding: '0 16px', height: '40px' }} 
                     disabled={status === 'thinking' || !input.trim()}
+                    aria-label="Send message to Jarvis"
                 >
                     Send
                 </button>

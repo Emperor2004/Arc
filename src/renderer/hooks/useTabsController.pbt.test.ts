@@ -1,19 +1,24 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import fc from 'fast-check';
 import { renderHook, act } from '@testing-library/react';
 import { useTabsController } from './useTabsController';
-import * as settingsStore from '../../core/settingsStore';
 
-// Mock the settings store
-vi.mock('../../core/settingsStore', () => ({
-  getSetting: vi.fn(),
-  updateSetting: vi.fn(),
-}));
+// Mock window.arc
+const mockArc = {
+  getSettings: vi.fn(),
+  updateSettings: vi.fn(),
+};
 
 describe('useTabsController - Property-Based Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(settingsStore.getSetting).mockReturnValue(undefined);
+    (window as any).arc = mockArc;
+    mockArc.getSettings.mockResolvedValue({ tabOrder: undefined });
+    mockArc.updateSettings.mockResolvedValue({});
+  });
+
+  afterEach(() => {
+    (window as any).arc = undefined;
   });
 
   describe('Property 1: Tab Order Preservation', () => {
@@ -192,7 +197,7 @@ describe('useTabsController - Property-Based Tests', () => {
               }
             });
 
-            vi.mocked(settingsStore.updateSetting).mockClear();
+            mockArc.updateSettings.mockClear();
 
             const reorderedIds = [...result.current.tabs.map(t => t.id)].reverse();
 
@@ -200,9 +205,10 @@ describe('useTabsController - Property-Based Tests', () => {
               result.current.handleTabReorder(reorderedIds);
             });
 
-            expect(vi.mocked(settingsStore.updateSetting)).toHaveBeenCalledWith(
-              'tabOrder',
-              expect.any(Array)
+            expect(mockArc.updateSettings).toHaveBeenCalledWith(
+              expect.objectContaining({
+                tabOrder: expect.any(Array)
+              })
             );
           }
         ),

@@ -1,10 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as historyStore from './historyStore';
 import * as bookmarkStore from './bookmarkStore';
 import * as feedbackStore from './feedbackStore';
 import * as settingsStore from './settingsStore';
 import { getJarvisRecommendations } from './recommender';
 import { isSearchQuery, buildSearchUrl } from './searchEngineManager';
+import * as tabGroupManager from './tabGroupManager';
+import { resetDatabase } from './database';
 
 describe('Integration Tests - API Contracts', () => {
   describe('History Store API', () => {
@@ -176,6 +178,191 @@ describe('Integration Tests - API Contracts', () => {
       // Reset settings
       const reset = settingsStore.resetSettings();
       expect(reset.theme).toBe('system');
+    });
+  });
+
+  describe('Tab Group Integration', () => {
+    beforeEach(() => {
+      resetDatabase();
+    });
+
+    afterEach(() => {
+      tabGroupManager.clearAllGroups();
+      resetDatabase();
+    });
+
+    it('should have required tab group manager methods', () => {
+      expect(typeof tabGroupManager.createGroup).toBe('function');
+      expect(typeof tabGroupManager.getGroup).toBe('function');
+      expect(typeof tabGroupManager.getAllGroups).toBe('function');
+      expect(typeof tabGroupManager.addTabToGroup).toBe('function');
+      expect(typeof tabGroupManager.removeTabFromGroup).toBe('function');
+      expect(typeof tabGroupManager.deleteGroup).toBe('function');
+      expect(typeof tabGroupManager.updateGroup).toBe('function');
+      expect(typeof tabGroupManager.toggleGroupCollapse).toBe('function');
+    });
+
+    it('should create and retrieve tab groups', () => {
+      const group = tabGroupManager.createGroup('Work', 'blue');
+      expect(group).toHaveProperty('id');
+      expect(group).toHaveProperty('name');
+      expect(group).toHaveProperty('color');
+      expect(group).toHaveProperty('tabIds');
+      expect(group).toHaveProperty('isCollapsed');
+      expect(group).toHaveProperty('createdAt');
+
+      const retrieved = tabGroupManager.getGroup(group.id);
+      expect(retrieved).toBeDefined();
+      expect(retrieved?.name).toBe('Work');
+      expect(retrieved?.color).toBe('blue');
+    });
+
+    it('should persist tab groups across multiple operations', () => {
+      // Create groups
+      const group1 = tabGroupManager.createGroup('Work', 'blue');
+      const group2 = tabGroupManager.createGroup('Personal', 'red');
+
+      // Add tabs to groups
+      tabGroupManager.addTabToGroup('tab-1', group1.id);
+      tabGroupManager.addTabToGroup('tab-2', group1.id);
+      tabGroupManager.addTabToGroup('tab-3', group2.id);
+
+      // Verify persistence
+      const retrieved1 = tabGroupManager.getGroup(group1.id);
+      const retrieved2 = tabGroupManager.getGroup(group2.id);
+
+      expect(retrieved1?.tabIds).toEqual(['tab-1', 'tab-2']);
+      expect(retrieved2?.tabIds).toEqual(['tab-3']);
+    });
+
+    it('should maintain group state after updates', () => {
+      const group = tabGroupManager.createGroup('Original', 'red');
+      tabGroupManager.addTabToGroup('tab-1', group.id);
+
+      // Update group
+      tabGroupManager.updateGroup(group.id, {
+        name: 'Updated',
+        color: 'blue',
+      });
+
+      // Verify state is maintained
+      const updated = tabGroupManager.getGroup(group.id);
+      expect(updated?.name).toBe('Updated');
+      expect(updated?.color).toBe('blue');
+      expect(updated?.tabIds).toEqual(['tab-1']);
+    });
+
+    it('should handle tab movement between groups', () => {
+      const group1 = tabGroupManager.createGroup('Group 1', 'red');
+      const group2 = tabGroupManager.createGroup('Group 2', 'blue');
+
+      // Add tab to group1
+      tabGroupManager.addTabToGroup('tab-1', group1.id);
+      expect(tabGroupManager.getGroup(group1.id)?.tabIds).toContain('tab-1');
+
+      // Move tab to group2
+      tabGroupManager.addTabToGroup('tab-1', group2.id);
+      expect(tabGroupManager.getGroup(group1.id)?.tabIds).not.toContain('tab-1');
+      expect(tabGroupManager.getGroup(group2.id)?.tabIds).toContain('tab-1');
+    });
+
+    it('should support group collapse/expand workflow', () => {
+      const group = tabGroupManager.createGroup('Test Group', 'green');
+      expect(tabGroupManager.getGroup(group.id)?.isCollapsed).toBe(false);
+
+      // Collapse group
+      tabGroupManager.toggleGroupCollapse(group.id);
+      expect(tabGroupManager.getGroup(group.id)?.isCollapsed).toBe(true);
+
+      // Expand group
+      tabGroupManager.toggleGroupCollapse(group.id);
+      expect(tabGroupManager.getGroup(group.id)?.isCollapsed).toBe(false);
+    });
+
+    it('should retrieve all groups in correct order', () => {
+      const group1 = tabGroupManager.createGroup('Group 1', 'red');
+      const group2 = tabGroupManager.createGroup('Group 2', 'blue');
+      const group3 = tabGroupManager.createGroup('Group 3', 'green');
+
+      const allGroups = tabGroupManager.getAllGroups();
+      expect(allGroups).toHaveLength(3);
+      // Should be in reverse chronological order
+      expect(allGroups[0].id).toBe(group3.id);
+      expect(allGroups[1].id).toBe(group2.id);
+      expect(allGroups[2].id).toBe(group1.id);
+    });
+
+    it('should support complete tab group workflow', () => {
+      // Create multiple groups
+      const workGroup = tabGroupManager.createGroup('Work', 'blue');
+      const personalGroup = tabGroupManager.createGroup('Personal', 'red');
+      const projectGroup = tabGroupManager.createGroup('Project', 'green');
+
+      // Add tabs to groups
+      tabGroupManager.addTabToGroup('tab-work-1', workGroup.id);
+      tabGroupManager.addTabToGroup('tab-work-2', workGroup.id);
+      tabGroupManager.addTabToGroup('tab-personal-1', personalGroup.id);
+      tabGroupManager.addTabToGroup('tab-project-1', projectGroup.id);
+      tabGroupManager.addTabToGroup('tab-project-2', projectGroup.id);
+      tabGroupManager.addTabToGroup('tab-project-3', projectGroup.id);
+
+      // Verify all groups
+      const allGroups = tabGroupManager.getAllGroups();
+      expect(allGroups).toHaveLength(3);
+
+      // Collapse work group
+      tabGroupManager.toggleGroupCollapse(workGroup.id);
+      expect(tabGroupManager.getGroup(workGroup.id)?.isCollapsed).toBe(true);
+
+      // Move a tab
+      tabGroupManager.addTabToGroup('tab-work-1', projectGroup.id);
+      expect(tabGroupManager.getGroup(workGroup.id)?.tabIds).toEqual(['tab-work-2']);
+      expect(tabGroupManager.getGroup(projectGroup.id)?.tabIds).toContain('tab-work-1');
+
+      // Delete a group
+      tabGroupManager.deleteGroup(personalGroup.id);
+      expect(tabGroupManager.getGroup(personalGroup.id)).toBeNull();
+      expect(tabGroupManager.getAllGroups()).toHaveLength(2);
+    });
+
+    it('should simulate persistence across restart', () => {
+      // Simulate first session: create groups and add tabs
+      const group1 = tabGroupManager.createGroup('Session 1 Group', 'blue');
+      tabGroupManager.addTabToGroup('tab-1', group1.id);
+      tabGroupManager.addTabToGroup('tab-2', group1.id);
+
+      // Simulate restart: retrieve groups from database
+      const retrievedGroup = tabGroupManager.getGroup(group1.id);
+      expect(retrievedGroup).toBeDefined();
+      expect(retrievedGroup?.name).toBe('Session 1 Group');
+      expect(retrievedGroup?.tabIds).toEqual(['tab-1', 'tab-2']);
+
+      // Simulate second session: continue with existing groups
+      tabGroupManager.addTabToGroup('tab-3', group1.id);
+      const updatedGroup = tabGroupManager.getGroup(group1.id);
+      expect(updatedGroup?.tabIds).toEqual(['tab-1', 'tab-2', 'tab-3']);
+    });
+
+    it('should maintain group integrity with large number of tabs', () => {
+      const group = tabGroupManager.createGroup('Large Group', 'purple');
+
+      // Add many tabs
+      for (let i = 0; i < 50; i++) {
+        tabGroupManager.addTabToGroup(`tab-${i}`, group.id);
+      }
+
+      // Verify all tabs are present
+      const retrieved = tabGroupManager.getGroup(group.id);
+      expect(retrieved?.tabIds).toHaveLength(50);
+
+      // Remove some tabs
+      for (let i = 0; i < 10; i++) {
+        tabGroupManager.removeTabFromGroup(`tab-${i}`, group.id);
+      }
+
+      // Verify correct number of tabs remain
+      const updated = tabGroupManager.getGroup(group.id);
+      expect(updated?.tabIds).toHaveLength(40);
     });
   });
 });

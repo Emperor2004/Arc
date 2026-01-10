@@ -1,6 +1,7 @@
 import { HistoryEntry, Recommendation, RecommendationKind, RecommendationFeedback } from './types';
 import { getRecentHistory } from './historyStore';
 import { getAllFeedback } from './feedbackStore';
+import { getPersonalizationSettings, applyPersonalization, meetsMinimumScore } from './personalizationManager';
 
 interface DomainStats {
     domain: string;
@@ -13,6 +14,26 @@ interface DomainStats {
 interface FeedbackStats {
     likes: number;
     dislikes: number;
+}
+
+// Cache for personalized recommendations
+interface RecommendationCache {
+    recommendations: Recommendation[];
+    timestamp: number;
+    settingsHash: string;
+}
+
+let recommendationCache: RecommendationCache | null = null;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+function hashPersonalizationSettings(settings: any): string {
+    return JSON.stringify({
+        recencyWeight: settings.recencyWeight,
+        frequencyWeight: settings.frequencyWeight,
+        feedbackWeight: settings.feedbackWeight,
+        minScore: settings.minScore,
+        maxRecommendations: settings.maxRecommendations
+    });
 }
 
 function extractDomain(url: string): string {
@@ -137,6 +158,20 @@ function applyFeedbackToScore(
 }
 
 export async function getJarvisRecommendations(limit = 5): Promise<Recommendation[]> {
+    // Get personalization settings
+    const personalizationSettings = getPersonalizationSettings();
+    const effectiveLimit = personalizationSettings.maxRecommendations || limit;
+    
+    // Check cache first
+    const settingsHash = hashPersonalizationSettings(personalizationSettings);
+    const now = Date.now();
+    
+    if (recommendationCache && 
+        (now - recommendationCache.timestamp) < CACHE_DURATION &&
+        recommendationCache.settingsHash === settingsHash) {
+        return recommendationCache.recommendations.slice(0, effectiveLimit);
+    }
+
     const history = await getRecentHistory(200);
     const feedback = await getAllFeedback();
     const feedbackMap = buildFeedbackMap(feedback);
@@ -171,7 +206,7 @@ export async function getJarvisRecommendations(limit = 5): Promise<Recommendatio
 
     // Calculate max visit count for normalization
     const maxVisits = Math.max(...allStats.map(s => s.visitCount));
-    const now = Date.now();
+    const now_ms = Date.now();
     const DAY_MS = 86400000;
 
     // Identify top favorites for keywords
@@ -186,10 +221,9 @@ export async function getJarvisRecommendations(limit = 5): Promise<Recommendatio
 
     for (const stats of allStats) {
         let kind: RecommendationKind | null = null;
-        let baseScore = 0;
         let baseReason = '';
 
-        const daysSinceVisit = (now - stats.lastVisitedAt) / DAY_MS;
+        const daysSinceVisit = (now_ms - stats.lastVisitedAt) / DAY_MS;
         const normalizedVisits = stats.visitCount / maxVisits;
         const temporalWeight = calculateTemporalWeight(daysSinceVisit);
 
@@ -202,16 +236,46 @@ export async function getJarvisRecommendations(limit = 5): Promise<Recommendatio
             urlFeedback.dislikes >= 2 && 
             urlFeedback.likes === 0;
 
-        // Categorize
+        // Calculate individual component scores for personalization
+        let frequencyScore = normalizedVisits;
+        let recencyScore = temporalWeight;
+        let feedbackScore = 0.5; // neutral baseline
+
+        // Apply feedback to feedback score
+        if (urlFeedback) {
+            const { likes, dislikes } = urlFeedback;
+            if (likes > 0 && dislikes === 0) {
+                feedbackScore = Math.min(1.0, 0.7 + (likes * 0.1));
+            } else if (dislikes > 0 && likes === 0) {
+                feedbackScore = Math.max(0.0, 0.3 - (dislikes * 0.15));
+            } else if (likes > 0 && dislikes > 0) {
+                const netLikes = likes - dislikes;
+                feedbackScore = 0.5 + (netLikes * 0.1);
+                feedbackScore = Math.max(0.0, Math.min(1.0, feedbackScore));
+            }
+        }
+
+        // Apply personalized scoring
+        const personalizedScore = applyPersonalization(
+            frequencyScore,
+            recencyScore,
+            feedbackScore,
+            personalizationSettings
+        );
+
+        // Check if score meets minimum threshold
+        if (!meetsMinimumScore(personalizedScore, personalizationSettings)) {
+            continue;
+        }
+
+        // Categorize based on original logic but use personalized score
         if (normalizedVisits > 0.5) {
             // High visit count
             if (daysSinceVisit > 7) {
                 kind = 'old_but_gold';
-                baseScore = normalizedVisits * 0.8; // Decay slightly
                 baseReason = "You used to come here a lot but haven't visited recently.";
             } else {
                 kind = 'favorite';
-                baseScore = normalizedVisits;
                 baseReason = "You visit this domain often — one of your favorites.";
             }
         } else {
@@ -229,17 +293,34 @@ export async function getJarvisRecommendations(limit = 5): Promise<Recommendatio
                 }
                 
                 kind = 'explore';
-                baseScore = 0.3 + (Math.min(overlap, 5) * 0.1);
                 baseReason = "Similar to content you like, but you rarely visit it.";
             }
         }
 
         if (kind) {
-            // Apply temporal weighting to base score
-            let temporallyWeightedScore = baseScore * temporalWeight;
-            
-            // Apply feedback adjustments to score and reason
-            const { score, feedbackReason } = applyFeedbackToScore(temporallyWeightedScore, urlFeedback, kind);
+            // Add feedback reason if applicable
+            let feedbackReason = '';
+            if (urlFeedback) {
+                const { likes, dislikes } = urlFeedback;
+                if (likes > 0 && dislikes === 0) {
+                    feedbackReason = likes === 1 ? ' (You liked this previously)' : ` (You liked this ${likes} times)`;
+                } else if (dislikes > 0 && likes === 0) {
+                    if (dislikes >= 2) {
+                        feedbackReason = ' (Muting similar sites)';
+                    } else {
+                        feedbackReason = dislikes === 1 ? ' (You disliked this previously)' : ` (You disliked this ${dislikes} times)`;
+                    }
+                } else if (likes > 0 && dislikes > 0) {
+                    const netLikes = likes - dislikes;
+                    if (netLikes > 0) {
+                        feedbackReason = ' (Mixed feedback, mostly positive)';
+                    } else if (netLikes < 0) {
+                        feedbackReason = ' (Mixed feedback, mostly negative)';
+                    } else {
+                        feedbackReason = ' (Mixed feedback)';
+                    }
+                }
+            }
             
             // Add temporal indicator to reason
             let temporalIndicator = '';
@@ -250,29 +331,47 @@ export async function getJarvisRecommendations(limit = 5): Promise<Recommendatio
             } else if (daysSinceVisit > 7) {
                 temporalIndicator = ' (Not visited recently)';
             }
-            
-            // Skip candidates with very low scores after feedback adjustment
-            if (score < 0.05) {
-                continue;
-            }
 
             candidates.push({
                 id: 0, // Generated on the fly
                 url: url,
                 title: stats.domain, // Use domain as safe title fallback
                 reason: baseReason + feedbackReason + temporalIndicator,
-                score,
-                kind
+                score: personalizedScore,
+                kind,
+                // Add personalization metadata for UI display
+                personalizedScores: {
+                    frequency: frequencyScore,
+                    recency: recencyScore,
+                    feedback: feedbackScore,
+                    combined: personalizedScore
+                }
             });
         }
     }
 
-    // Sort by score, shuffle types a bit? 
-    // For now, strict score sort + taking top N
-    return candidates
+    // Sort by personalized score and take top N
+    const finalRecommendations = candidates
         .sort((a, b) => b.score - a.score)
-        .slice(0, limit);
+        .slice(0, effectiveLimit);
+
+    // Cache the results
+    recommendationCache = {
+        recommendations: finalRecommendations,
+        timestamp: now,
+        settingsHash
+    };
+
+    return finalRecommendations;
 }
 
 // Export helper functions for testing
 export { extractDomain, extractKeywords, buildFeedbackMap, applyFeedbackToScore, calculateTemporalWeight };
+
+/**
+ * Clear the recommendation cache
+ * This should be called when personalization settings change
+ */
+export function clearRecommendationCache(): void {
+    recommendationCache = null;
+}

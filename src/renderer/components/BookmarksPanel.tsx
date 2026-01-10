@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Bookmark } from '../../core/types';
-import { getAllBookmarks, removeBookmark, getBookmarksSorted } from '../../core/bookmarkStore';
 
 export interface BookmarksPanelProps {
     onBookmarkClick?: (url: string) => void;
@@ -15,7 +14,6 @@ const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
     const [filteredBookmarks, setFilteredBookmarks] = useState<Bookmark[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isLoading, setIsLoading] = useState(true);
-    const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
     // Load bookmarks on mount
     useEffect(() => {
@@ -41,8 +39,13 @@ const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
     const loadBookmarks = async () => {
         try {
             setIsLoading(true);
-            const sorted = await getBookmarksSorted(sortOrder);
-            setBookmarks(sorted);
+            if (window.arc && window.arc.getAllBookmarks) {
+                const result = await window.arc.getAllBookmarks();
+                const allBookmarks = result.bookmarks || [];
+                // Sort by createdAt descending (newest first)
+                const sorted = [...allBookmarks].sort((a, b) => b.createdAt - a.createdAt);
+                setBookmarks(sorted);
+            }
         } catch (error) {
             console.error('Error loading bookmarks:', error);
         } finally {
@@ -50,13 +53,13 @@ const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
         }
     };
 
-    const handleRemoveBookmark = async (id: string, e: React.MouseEvent) => {
+    const handleRemoveBookmark = async (url: string, e: React.MouseEvent) => {
         e.stopPropagation();
 
         try {
-            const removed = removeBookmark(id);
-            if (removed) {
-                setBookmarks(bookmarks.filter(b => b.id !== id));
+            if (window.arc && window.arc.removeBookmark) {
+                await window.arc.removeBookmark(url);
+                setBookmarks(bookmarks.filter(b => b.url !== url));
                 onBookmarkRemoved?.();
             }
         } catch (error) {
@@ -66,16 +69,6 @@ const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
 
     const handleBookmarkClick = (url: string) => {
         onBookmarkClick?.(url);
-    };
-
-    const handleSortChange = async (order: 'asc' | 'desc') => {
-        setSortOrder(order);
-        try {
-            const sorted = await getBookmarksSorted(order);
-            setBookmarks(sorted);
-        } catch (error) {
-            console.error('Error sorting bookmarks:', error);
-        }
     };
 
     const formatDate = (timestamp: number): string => {
@@ -112,14 +105,6 @@ const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
-                    <select
-                        className="bookmarks-sort"
-                        value={sortOrder}
-                        onChange={(e) => handleSortChange(e.target.value as 'asc' | 'desc')}
-                    >
-                        <option value="desc">Newest First</option>
-                        <option value="asc">Oldest First</option>
-                    </select>
                 </div>
             </div>
 
@@ -135,7 +120,7 @@ const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
                 ) : (
                     filteredBookmarks.map(bookmark => (
                         <div
-                            key={bookmark.id}
+                            key={bookmark.url}
                             className="bookmark-item"
                             onClick={() => handleBookmarkClick(bookmark.url)}
                         >
@@ -159,7 +144,7 @@ const BookmarksPanel: React.FC<BookmarksPanelProps> = ({
                             </div>
                             <button
                                 className="bookmark-remove"
-                                onClick={(e) => handleRemoveBookmark(bookmark.id, e)}
+                                onClick={(e) => handleRemoveBookmark(bookmark.url, e)}
                                 title="Remove bookmark"
                                 aria-label="Remove bookmark"
                             >

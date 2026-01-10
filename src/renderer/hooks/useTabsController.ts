@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Tab } from '../../core/types';
-import { getSetting, updateSetting } from '../../core/settingsStore';
 
 export interface TabsController {
     tabs: Tab[];
@@ -14,6 +13,7 @@ export interface TabsController {
     handleTabTitleUpdate: (title: string) => void;
     updateActiveTabUrl: (url: string) => void;
     handleTabReorder: (tabIds: string[]) => void;
+    restoreTabs: (tabs: Tab[]) => void;
 }
 
 export const useTabsController = (): TabsController => {
@@ -34,31 +34,52 @@ export const useTabsController = (): TabsController => {
 
     // Load tab order from settings on mount
     useEffect(() => {
-        const savedTabOrder = getSetting('tabOrder') as string[] | undefined;
-        if (savedTabOrder && savedTabOrder.length > 0) {
-            // Reorder tabs based on saved order
-            setTabs(prevTabs => {
-                const tabMap = new Map(prevTabs.map(tab => [tab.id, tab]));
-                const reorderedTabs = savedTabOrder
-                    .map(id => tabMap.get(id))
-                    .filter((tab): tab is Tab => tab !== undefined);
-                
-                // Add any tabs that weren't in the saved order
-                prevTabs.forEach(tab => {
-                    if (!reorderedTabs.find(t => t.id === tab.id)) {
-                        reorderedTabs.push(tab);
+        const loadTabOrder = async () => {
+            try {
+                if (window.arc && window.arc.getSettings) {
+                    const settings = await window.arc.getSettings();
+                    const savedTabOrder = settings.tabOrder as string[] | undefined;
+                    if (savedTabOrder && savedTabOrder.length > 0) {
+                        // Reorder tabs based on saved order
+                        setTabs(prevTabs => {
+                            const tabMap = new Map(prevTabs.map(tab => [tab.id, tab]));
+                            const reorderedTabs = savedTabOrder
+                                .map(id => tabMap.get(id))
+                                .filter((tab): tab is Tab => tab !== undefined);
+                            
+                            // Add any tabs that weren't in the saved order
+                            prevTabs.forEach(tab => {
+                                if (!reorderedTabs.find(t => t.id === tab.id)) {
+                                    reorderedTabs.push(tab);
+                                }
+                            });
+                            
+                            return reorderedTabs.length > 0 ? reorderedTabs : prevTabs;
+                        });
                     }
-                });
-                
-                return reorderedTabs.length > 0 ? reorderedTabs : prevTabs;
-            });
-        }
+                }
+            } catch (error) {
+                console.error('Error loading tab order:', error);
+            }
+        };
+        
+        loadTabOrder();
     }, []);
 
     // Save tab order whenever tabs change
     useEffect(() => {
-        const tabIds = tabs.map(tab => tab.id);
-        updateSetting('tabOrder', tabIds);
+        const saveTabOrder = async () => {
+            try {
+                const tabIds = tabs.map(tab => tab.id);
+                if (window.arc && window.arc.updateSettings) {
+                    await window.arc.updateSettings({ tabOrder: tabIds });
+                }
+            } catch (error) {
+                console.error('Error saving tab order:', error);
+            }
+        };
+        
+        saveTabOrder();
     }, [tabs]);
 
     const handleNewTab = () => {
@@ -162,6 +183,16 @@ export const useTabsController = (): TabsController => {
         });
     };
 
+    const restoreTabs = (newTabs: Tab[]) => {
+        if (newTabs.length > 0) {
+            setTabs(newTabs);
+            const activeTab = newTabs.find(tab => tab.isActive);
+            if (activeTab) {
+                setUrl(activeTab.url);
+            }
+        }
+    };
+
     return {
         tabs,
         activeTab,
@@ -173,6 +204,7 @@ export const useTabsController = (): TabsController => {
         handleTabClose,
         handleTabTitleUpdate,
         updateActiveTabUrl,
-        handleTabReorder
+        handleTabReorder,
+        restoreTabs
     };
 };

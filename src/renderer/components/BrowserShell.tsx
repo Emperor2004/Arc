@@ -5,6 +5,8 @@ import AddressBar from './AddressBar';
 import { useTabsController } from '../hooks/useTabsController';
 import { useSettingsController } from '../hooks/useSettingsController';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useSessionManager } from '../hooks/useSessionManager';
+import { useTabGroups } from '../hooks/useTabGroups';
 import { useDebug } from '../contexts/DebugContext';
 import { normalizeInput } from '../../core/searchEngineManager';
 
@@ -32,8 +34,25 @@ const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete, onMax
         handleTabClose, 
         handleTabTitleUpdate,
         updateActiveTabUrl,
-        handleTabReorder
+        handleTabReorder,
+        restoreTabs
     } = tabsController;
+
+    // Initialize tab groups
+    const {
+        groups,
+        createGroup,
+        addTabToGroup,
+        removeTabFromGroup,
+        getGroupForTab
+    } = useTabGroups(tabs);
+
+    // Initialize session manager
+    useSessionManager({
+        tabs,
+        activeTab,
+        onRestoreTabs: restoreTabs
+    });
 
     const isIncognitoActive = activeTab?.incognito || false;
 
@@ -163,6 +182,11 @@ const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete, onMax
                 onTabClose={handleTabClose}
                 onTabReorder={handleTabReorder}
                 incognitoEnabled={settings.incognitoEnabled}
+                groups={groups}
+                onCreateGroup={createGroup}
+                onAddTabToGroup={addTabToGroup}
+                onRemoveTabFromGroup={removeTabFromGroup}
+                getGroupForTab={getGroupForTab}
             />
 
             {/* Incognito Banner */}

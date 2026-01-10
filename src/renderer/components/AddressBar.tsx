@@ -42,11 +42,12 @@ const AddressBar: React.FC<AddressBarProps> = ({
 
     return (
         <div className="browser-toolbar">
-            <div className="browser-nav-buttons">
+            <div className="browser-nav-buttons" role="toolbar" aria-label="Browser navigation">
                 <button 
                     className="round-btn" 
                     onClick={onBack} 
                     title="Go back"
+                    aria-label="Go back"
                     disabled={!canGoBack}
                 >
                     ←
@@ -55,6 +56,7 @@ const AddressBar: React.FC<AddressBarProps> = ({
                     className="round-btn" 
                     onClick={onForward} 
                     title="Go forward"
+                    aria-label="Go forward"
                     disabled={!canGoForward}
                 >
                     →
@@ -63,13 +65,14 @@ const AddressBar: React.FC<AddressBarProps> = ({
                     className="round-btn" 
                     onClick={onReload} 
                     title="Reload page"
+                    aria-label="Reload page"
                     disabled={!hasActiveTab || !url}
                 >
                     ↻
                 </button>
             </div>
 
-            <div className="browser-address-bar">
+            <div className="browser-address-bar" role="search" aria-label="Address and search bar">
                 <input
                     type="text"
                     className="pill-input"
@@ -77,6 +80,10 @@ const AddressBar: React.FC<AddressBarProps> = ({
                     onChange={(e) => onUrlChange(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Search or enter URL"
+                    aria-label="Enter URL or search terms"
+                    role="combobox"
+                    aria-expanded="false"
+                    aria-autocomplete="both"
                 />
                 <BookmarkButton
                     url={url}
@@ -88,6 +95,7 @@ const AddressBar: React.FC<AddressBarProps> = ({
                     className="btn-primary" 
                     onClick={onNavigate}
                     disabled={!url.trim()}
+                    aria-label="Navigate to URL or search"
                 >
                     Go
                 </button>
@@ -97,6 +105,7 @@ const AddressBar: React.FC<AddressBarProps> = ({
                         type="button"
                         onClick={onMaximize}
                         title={isMaximized ? "Restore browser" : "Maximize browser"}
+                        aria-label={isMaximized ? "Restore browser window" : "Maximize browser window"}
                     >
                         ⤢
                     </button>

@@ -1,5 +1,3 @@
-import { getSetting, updateSetting } from './settingsStore';
-
 export type ThemeMode = 'system' | 'light' | 'dark';
 
 export interface ThemeConfig {
@@ -17,14 +15,23 @@ export class ThemeManager {
   private listeners: Set<(config: ThemeConfig) => void> = new Set();
 
   constructor() {
-    this.currentMode = getSetting('theme');
     this.initializeTheme();
   }
 
   /**
    * Initialize theme on startup
    */
-  private initializeTheme(): void {
+  private async initializeTheme(): Promise<void> {
+    // Try to load theme from settings via IPC
+    try {
+      if (typeof window !== 'undefined' && (window as any).arc && (window as any).arc.getSettings) {
+        const settings = await (window as any).arc.getSettings();
+        this.currentMode = settings.theme || 'system';
+      }
+    } catch (error) {
+      console.warn('Could not load theme from settings:', error);
+    }
+
     this.isDark = this.resolveTheme();
     this.applyTheme();
     this.setupSystemThemeListener();
@@ -91,7 +98,7 @@ export class ThemeManager {
   /**
    * Set theme mode and persist
    */
-  setTheme(mode: ThemeMode): void {
+  async setTheme(mode: ThemeMode): Promise<void> {
     if (this.currentMode === mode) {
       return; // Idempotent - no change needed
     }
@@ -99,7 +106,16 @@ export class ThemeManager {
     this.currentMode = mode;
     this.isDark = this.resolveTheme();
     this.applyTheme();
-    updateSetting('theme', mode);
+    
+    // Persist via IPC
+    try {
+      if (typeof window !== 'undefined' && (window as any).arc && (window as any).arc.updateSettings) {
+        await (window as any).arc.updateSettings({ theme: mode });
+      }
+    } catch (error) {
+      console.warn('Could not save theme to settings:', error);
+    }
+    
     this.notifyListeners();
   }
 

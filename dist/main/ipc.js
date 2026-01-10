@@ -40,6 +40,8 @@ const feedbackStore_1 = require("../core/feedbackStore");
 const settingsStore_1 = require("../core/settingsStore");
 const recommender_1 = require("../core/recommender");
 const dataManager = __importStar(require("../core/dataManager"));
+const bookmarkStore_1 = require("../core/bookmarkStore");
+const sessionManager_1 = require("../core/sessionManager");
 const setupIpc = (mainWindow) => {
     electron_1.ipcMain.on('arc:navigate', (event, url) => {
         let targetUrl = url;
@@ -75,6 +77,16 @@ const setupIpc = (mainWindow) => {
         catch (err) {
             console.error('Error in jarvis:getRecommendations handler:', err);
             return [];
+        }
+    });
+    electron_1.ipcMain.handle('jarvis:clearCache', async () => {
+        try {
+            (0, recommender_1.clearRecommendationCache)();
+            return { ok: true };
+        }
+        catch (err) {
+            console.error('Error in jarvis:clearCache handler:', err);
+            return { ok: false };
         }
     });
     electron_1.ipcMain.handle('arc:getRecentHistory', async (_event, limit) => {
@@ -135,6 +147,57 @@ const setupIpc = (mainWindow) => {
             return { ok: false };
         }
     });
+    // Bookmark handlers
+    electron_1.ipcMain.handle('arc:addBookmark', async (_event, url, title) => {
+        try {
+            await (0, bookmarkStore_1.addBookmark)(url, title);
+            return { ok: true };
+        }
+        catch (err) {
+            console.error('Error in arc:addBookmark handler:', err);
+            return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+    electron_1.ipcMain.handle('arc:removeBookmark', async (_event, url) => {
+        try {
+            await (0, bookmarkStore_1.removeBookmark)(url);
+            return { ok: true };
+        }
+        catch (err) {
+            console.error('Error in arc:removeBookmark handler:', err);
+            return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+    electron_1.ipcMain.handle('arc:isBookmarked', async (_event, url) => {
+        try {
+            const bookmarked = await (0, bookmarkStore_1.isBookmarked)(url);
+            return { ok: true, bookmarked };
+        }
+        catch (err) {
+            console.error('Error in arc:isBookmarked handler:', err);
+            return { ok: false, bookmarked: false };
+        }
+    });
+    electron_1.ipcMain.handle('arc:getAllBookmarks', async () => {
+        try {
+            const bookmarks = await (0, bookmarkStore_1.getAllBookmarks)();
+            return { ok: true, bookmarks };
+        }
+        catch (err) {
+            console.error('Error in arc:getAllBookmarks handler:', err);
+            return { ok: false, bookmarks: [] };
+        }
+    });
+    electron_1.ipcMain.handle('arc:searchBookmarks', async (_event, query) => {
+        try {
+            const results = await (0, bookmarkStore_1.searchBookmarks)(query);
+            return { ok: true, results };
+        }
+        catch (err) {
+            console.error('Error in arc:searchBookmarks handler:', err);
+            return { ok: false, results: [] };
+        }
+    });
     // Data export/import handlers
     electron_1.ipcMain.handle('arc:exportData', async () => {
         try {
@@ -154,6 +217,49 @@ const setupIpc = (mainWindow) => {
         catch (err) {
             console.error('Error in arc:importData handler:', err);
             return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+    // Session management handlers
+    electron_1.ipcMain.handle('arc:loadSession', async () => {
+        try {
+            const session = (0, sessionManager_1.loadSession)();
+            return { ok: true, session };
+        }
+        catch (err) {
+            console.error('Error in arc:loadSession handler:', err);
+            return { ok: false, session: null };
+        }
+    });
+    electron_1.ipcMain.handle('arc:saveSession', async (_event, tabs, activeTabId) => {
+        try {
+            const sessionState = (0, sessionManager_1.createSessionState)(tabs, activeTabId);
+            (0, sessionManager_1.saveSession)(sessionState);
+            return { ok: true };
+        }
+        catch (err) {
+            console.error('Error in arc:saveSession handler:', err);
+            return { ok: false };
+        }
+    });
+    electron_1.ipcMain.handle('arc:clearSession', async () => {
+        try {
+            (0, sessionManager_1.clearSession)();
+            return { ok: true };
+        }
+        catch (err) {
+            console.error('Error in arc:clearSession handler:', err);
+            return { ok: false };
+        }
+    });
+    electron_1.ipcMain.handle('arc:restoreSession', async (_event, tabs) => {
+        try {
+            // Restore session by creating new tabs with the provided data
+            // This is handled by the renderer, we just acknowledge
+            return { ok: true };
+        }
+        catch (err) {
+            console.error('Error in arc:restoreSession handler:', err);
+            return { ok: false };
         }
     });
 };

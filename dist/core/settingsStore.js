@@ -49,6 +49,13 @@ const DEFAULT_SETTINGS = {
     searchEngine: 'google',
     tabOrder: [],
     keyboardShortcutsEnabled: true,
+    restorePreviousSession: true,
+    // Accessibility defaults
+    reducedMotion: false,
+    highContrast: false,
+    fontSize: 'medium',
+    focusIndicators: true,
+    screenReaderOptimizations: false,
 };
 // Ensure directory exists
 function ensureDir() {

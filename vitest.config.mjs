@@ -21,6 +21,8 @@ export default defineConfig({
     include: ['src/**/*.{test,pbt.test}.{ts,tsx}'],
     environmentMatchGlobs: [
       ['src/renderer/**', 'jsdom'],
+      ['src/core/accessibilityAuditor.test.ts', 'jsdom'],
+      ['src/test/accessibility/**', 'jsdom'],
     ],
   },
 });

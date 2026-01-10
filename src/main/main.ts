@@ -12,8 +12,10 @@ const createWindow = () => {
     webPreferences: {
       preload: join(__dirname, 'preload.js'),
       webviewTag: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
     },
-
   });
 
   setupIpc(mainWindow);

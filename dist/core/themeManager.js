@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ThemeManager = void 0;
 exports.getThemeManager = getThemeManager;
-const settingsStore_1 = require("./settingsStore");
 /**
  * ThemeManager handles theme detection, switching, and persistence
  */
@@ -12,13 +11,22 @@ class ThemeManager {
         this.isDark = false;
         this.mediaQueryList = null;
         this.listeners = new Set();
-        this.currentMode = (0, settingsStore_1.getSetting)('theme');
         this.initializeTheme();
     }
     /**
      * Initialize theme on startup
      */
-    initializeTheme() {
+    async initializeTheme() {
+        // Try to load theme from settings via IPC
+        try {
+            if (typeof window !== 'undefined' && window.arc && window.arc.getSettings) {
+                const settings = await window.arc.getSettings();
+                this.currentMode = settings.theme || 'system';
+            }
+        }
+        catch (error) {
+            console.warn('Could not load theme from settings:', error);
+        }
         this.isDark = this.resolveTheme();
         this.applyTheme();
         this.setupSystemThemeListener();
@@ -81,14 +89,22 @@ class ThemeManager {
     /**
      * Set theme mode and persist
      */
-    setTheme(mode) {
+    async setTheme(mode) {
         if (this.currentMode === mode) {
             return; // Idempotent - no change needed
         }
         this.currentMode = mode;
         this.isDark = this.resolveTheme();
         this.applyTheme();
-        (0, settingsStore_1.updateSetting)('theme', mode);
+        // Persist via IPC
+        try {
+            if (typeof window !== 'undefined' && window.arc && window.arc.updateSettings) {
+                await window.arc.updateSettings({ theme: mode });
+            }
+        }
+        catch (error) {
+            console.warn('Could not save theme to settings:', error);
+        }
         this.notifyListeners();
     }
     /**

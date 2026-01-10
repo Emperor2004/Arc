@@ -12,6 +12,13 @@ const DEFAULT_SETTINGS: ArcSettings = {
   searchEngine: 'google',
   tabOrder: [],
   keyboardShortcutsEnabled: true,
+  restorePreviousSession: true,
+  // Accessibility defaults
+  reducedMotion: false,
+  highContrast: false,
+  fontSize: 'medium',
+  focusIndicators: true,
+  screenReaderOptimizations: false,
 };
 
 // Ensure directory exists

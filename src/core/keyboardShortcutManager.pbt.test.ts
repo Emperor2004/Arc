@@ -1,8 +1,19 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fc from 'fast-check';
 import { KeyboardShortcutManager } from './keyboardShortcutManager';
 
 describe('KeyboardShortcutManager Properties', () => {
+  let consoleWarnSpy: any;
+
+  beforeEach(() => {
+    // Suppress console.warn for duplicate shortcut warnings in tests
+    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    consoleWarnSpy.mockRestore();
+  });
+
   describe('Property 8: Keyboard Shortcut Uniqueness', () => {
     it('should not allow duplicate shortcuts on same platform', () => {
       // Feature: arc-browser-enhancements, Property 8: Keyboard Shortcut Uniqueness

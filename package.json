@@ -14,7 +14,18 @@
     "test": "vitest",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "package": "electron-builder",
+    "test:accessibility": "node scripts/run-accessibility-audit.js",
+    "test:a11y": "npm run test:accessibility",
+    "audit:accessibility": "npm run test -- src/core/accessibilityAuditor.test.ts --run",
+    "test:performance": "vitest run src/test/performance/performanceBenchmarks.test.ts",
+    "benchmark": "npm run build:main && node dist/test/performance/runBenchmarks.js",
+    "benchmark:dev": "ts-node src/test/performance/runBenchmarks.ts",
+    "performance:profile": "npm run build:main && node --inspect dist/test/performance/runBenchmarks.js",
+    "performance:memory": "npm run build:main && node --max-old-space-size=512 dist/test/performance/runBenchmarks.js",
+    "performance:optimize": "npm run build:main && node dist/core/performance/optimizeApp.js",
+    "package": "electron-builder --dir --publish=never",
+    "package:installer": "electron-builder",
+    "package:simple": "electron-packager . arc-browser --platform=win32 --arch=x64 --out=release --overwrite",
     "postinstall": "electron-builder install-app-deps"
   },
   "devDependencies": {
@@ -32,7 +43,7 @@
     "concurrently": "^8.2.0",
     "electron": "^25.0.0",
     "electron-builder": "^24.0.0",
-    "electron-rebuild": "^3.2.9",
+    "electron-packager": "^17.1.2",
     "eslint": "^8.45.0",
     "eslint-plugin-react": "^7.33.0",
     "eslint-plugin-react-hooks": "^4.6.0",
@@ -48,6 +59,7 @@
     "react-beautiful-dnd": "^13.1.1",
     "react-dom": "^18.2.0"
   },
+  "author": "Arc Browser Team",
   "build": {
     "appId": "com.arc.browser",
     "productName": "Arc Browser",
@@ -62,10 +74,17 @@
       "category": "public.app-category.productivity"
     },
     "win": {
-      "target": "nsis"
+      "target": "portable",
+      "certificateFile": null,
+      "certificatePassword": null,
+      "sign": null
     },
     "linux": {
       "target": "AppImage"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
     }
   }
 }
