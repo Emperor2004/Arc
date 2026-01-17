@@ -22,6 +22,9 @@ test-component-output.txt
 test-integration-output.txt
 test-pbt-output.txt
 all-tab-group-tests.txt
+test-results-summary.json
+test-diagnostics.log
+app-test-output.txt
 .test.ts
 
 # Temporary files
@@ -84,6 +87,20 @@ app/build/
 BUILD_FIX_SUMMARY.md
 PACKAGE_BUILD_FIX_SUMMARY.md
 UI_RENDERING_FIXES.md
+*_SUMMARY.md
+*_COMPLETE.md
+*_IMPLEMENTATION*.md
+*_DIAGNOSTICS*.md
+*_VERIFICATION.md
+*_ANALYSIS.md
+*_PLAN.md
+*_FIXES*.md
+GOOGLE_AUTH_FIX.md
+OLLAMA_*.md
+SQLITE_*.md
+SESSION_*.md
+JARVIS_*.md
+TEST_*.md
 
 # Kiro
 .kiro/
