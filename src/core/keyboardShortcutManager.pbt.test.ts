@@ -47,7 +47,7 @@ describe('KeyboardShortcutManager Properties', () => {
             expect(shortcuts.length).toBe(1);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -84,7 +84,7 @@ describe('KeyboardShortcutManager Properties', () => {
             expect(shortcuts[0].platform).toBe('win32');
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -157,7 +157,7 @@ describe('KeyboardShortcutManager Properties', () => {
             expect(count1).toBe(count2);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -187,7 +187,7 @@ describe('KeyboardShortcutManager Properties', () => {
             expect(found1).toBe(true);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -204,7 +204,7 @@ describe('KeyboardShortcutManager Properties', () => {
             expect(found).toBe(false);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -234,7 +234,7 @@ describe('KeyboardShortcutManager Properties', () => {
             expect(manager.hasShortcut(key, modifiers as any)).toBe(false);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });

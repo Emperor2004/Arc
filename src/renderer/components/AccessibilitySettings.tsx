@@ -15,31 +15,45 @@ const AccessibilitySettings: React.FC<AccessibilitySettingsProps> = ({ onMessage
 
     useEffect(() => {
         // Detect system preferences
-        if (window.matchMedia) {
-            const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-            const highContrastQuery = window.matchMedia('(prefers-contrast: high)');
-            
-            setSystemPreferences({
-                prefersReducedMotion: reducedMotionQuery.matches,
-                prefersHighContrast: highContrastQuery.matches
-            });
+        if (window.matchMedia && typeof window.matchMedia === 'function') {
+            try {
+                const reducedMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+                const highContrastQuery = window.matchMedia('(prefers-contrast: high)');
+                
+                // Ensure queries are valid before using them
+                if (reducedMotionQuery && highContrastQuery) {
+                    setSystemPreferences({
+                        prefersReducedMotion: reducedMotionQuery.matches ?? false,
+                        prefersHighContrast: highContrastQuery.matches ?? false
+                    });
 
-            // Listen for changes
-            const handleReducedMotionChange = (e: MediaQueryListEvent) => {
-                setSystemPreferences(prev => ({ ...prev, prefersReducedMotion: e.matches }));
-            };
+                    // Listen for changes only if addEventListener is available
+                    if (reducedMotionQuery.addEventListener && highContrastQuery.addEventListener) {
+                        const handleReducedMotionChange = (e: MediaQueryListEvent) => {
+                            setSystemPreferences(prev => ({ ...prev, prefersReducedMotion: e.matches }));
+                        };
 
-            const handleHighContrastChange = (e: MediaQueryListEvent) => {
-                setSystemPreferences(prev => ({ ...prev, prefersHighContrast: e.matches }));
-            };
+                        const handleHighContrastChange = (e: MediaQueryListEvent) => {
+                            setSystemPreferences(prev => ({ ...prev, prefersHighContrast: e.matches }));
+                        };
 
-            reducedMotionQuery.addEventListener('change', handleReducedMotionChange);
-            highContrastQuery.addEventListener('change', handleHighContrastChange);
+                        reducedMotionQuery.addEventListener('change', handleReducedMotionChange);
+                        highContrastQuery.addEventListener('change', handleHighContrastChange);
 
-            return () => {
-                reducedMotionQuery.removeEventListener('change', handleReducedMotionChange);
-                highContrastQuery.removeEventListener('change', handleHighContrastChange);
-            };
+                        return () => {
+                            if (reducedMotionQuery.removeEventListener) {
+                                reducedMotionQuery.removeEventListener('change', handleReducedMotionChange);
+                            }
+                            if (highContrastQuery.removeEventListener) {
+                                highContrastQuery.removeEventListener('change', handleHighContrastChange);
+                            }
+                        };
+                    }
+                }
+            } catch (error) {
+                // Silently fail if matchMedia is not supported
+                console.warn('matchMedia not supported:', error);
+            }
         }
     }, []);
 

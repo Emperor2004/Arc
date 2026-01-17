@@ -1,6 +1,24 @@
 {
-  "theme": "light",
-  "jarvisEnabled": false,
+  "theme": "system",
+  "jarvisEnabled": true,
   "useHistoryForRecommendations": true,
-  "incognitoEnabled": true
+  "incognitoEnabled": true,
+  "searchEngine": "google",
+  "tabOrder": [
+    "tab-1"
+  ],
+  "keyboardShortcutsEnabled": true,
+  "restorePreviousSession": true,
+  "recencyWeight": 0.5,
+  "frequencyWeight": 0.3,
+  "feedbackWeight": 0.2,
+  "minScore": 0.1,
+  "maxRecommendations": 5,
+  "ollamaModel": "llama3:latest",
+  "ollamaEnabled": true,
+  "reducedMotion": false,
+  "highContrast": false,
+  "fontSize": "medium",
+  "focusIndicators": true,
+  "screenReaderOptimizations": false
 }

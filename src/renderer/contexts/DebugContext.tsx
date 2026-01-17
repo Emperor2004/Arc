@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 
 interface DebugState {
   section: 'browser' | 'settings';
@@ -54,21 +54,21 @@ export const DebugProvider: React.FC<DebugProviderProps> = ({ children }) => {
     timestamp: Date.now()
   });
 
-  const updateDebugState = (updates: Partial<DebugState>) => {
+  const updateDebugState = useCallback((updates: Partial<DebugState>) => {
     setDebugState(prev => ({
       ...prev,
       ...updates,
       timestamp: Date.now()
     }));
-  };
+  }, []);
 
-  const logAction = (action: string) => {
+  const logAction = useCallback((action: string) => {
     setDebugState(prev => ({
       ...prev,
       lastAction: action,
       timestamp: Date.now()
     }));
-  };
+  }, []);
 
   return (
     <DebugContext.Provider value={{ debugState, updateDebugState, logAction }}>

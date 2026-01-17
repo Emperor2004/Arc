@@ -4,7 +4,7 @@ import {
   updatePersonalizationSettings, 
   RecommendationPersonalization,
   getOllamaModels 
-} from '../../core/personalizationManager';
+} from '../services/personalizationService';
 import { getJarvisRecommendations } from '../../core/recommender';
 import { Recommendation } from '../../core/types';
 

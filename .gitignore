@@ -22,6 +22,7 @@ test-component-output.txt
 test-integration-output.txt
 test-pbt-output.txt
 all-tab-group-tests.txt
+.test.ts
 
 # Temporary files
 temp-gyp-test/
@@ -83,3 +84,7 @@ app/build/
 BUILD_FIX_SUMMARY.md
 PACKAGE_BUILD_FIX_SUMMARY.md
 UI_RENDERING_FIXES.md
+
+# Kiro
+.kiro/
+

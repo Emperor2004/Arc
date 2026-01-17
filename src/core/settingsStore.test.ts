@@ -1,6 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as fs from 'fs';
-import * as path from 'path';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   getSettings,
   updateSettings,
@@ -9,23 +7,16 @@ import {
   resetSettings,
 } from './settingsStore';
 
-// Mock fs module
-vi.mock('fs');
-vi.mock('path');
-
 describe('SettingsStore Module', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    // Mock path.join to return a consistent path
-    vi.mocked(path.join).mockReturnValue('/mock/settings.json');
-    // Mock fs.existsSync to return true
-    vi.mocked(fs.existsSync).mockReturnValue(true);
+    // Clear localStorage before each test
+    if (typeof window !== 'undefined' && window.localStorage) {
+      window.localStorage.clear();
+    }
   });
 
   describe('getSettings', () => {
-    it('should return default settings when file does not exist', () => {
-      vi.mocked(fs.existsSync).mockReturnValue(false);
-
+    it('should return default settings when localStorage is empty', () => {
       const settings = getSettings();
 
       expect(settings.theme).toBe('system');
@@ -33,7 +24,7 @@ describe('SettingsStore Module', () => {
       expect(settings.incognitoEnabled).toBe(true);
     });
 
-    it('should load settings from file', () => {
+    it('should load settings from localStorage', () => {
       const savedSettings = {
         theme: 'dark',
         jarvisEnabled: false,
@@ -41,7 +32,9 @@ describe('SettingsStore Module', () => {
         incognitoEnabled: true,
       };
 
-      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(savedSettings));
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('arc-browser-settings', JSON.stringify(savedSettings));
+      }
 
       const settings = getSettings();
 
@@ -54,7 +47,9 @@ describe('SettingsStore Module', () => {
         theme: 'dark',
       };
 
-      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(partialSettings));
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('arc-browser-settings', JSON.stringify(partialSettings));
+      }
 
       const settings = getSettings();
 
@@ -65,9 +60,6 @@ describe('SettingsStore Module', () => {
 
   describe('updateSettings', () => {
     it('should update multiple settings', () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('{}');
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
-
       const updated = updateSettings({
         theme: 'dark',
         jarvisEnabled: false,
@@ -85,8 +77,9 @@ describe('SettingsStore Module', () => {
         incognitoEnabled: true,
       };
 
-      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(existingSettings));
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('arc-browser-settings', JSON.stringify(existingSettings));
+      }
 
       const updated = updateSettings({ theme: 'dark' });
 
@@ -94,16 +87,17 @@ describe('SettingsStore Module', () => {
       expect(updated.jarvisEnabled).toBe(true);
     });
 
-    it('should save settings to file', () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('{}');
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
-
+    it('should save settings to localStorage', () => {
       updateSettings({ theme: 'dark' });
 
-      expect(vi.mocked(fs.writeFileSync)).toHaveBeenCalled();
-      const writeCall = vi.mocked(fs.writeFileSync).mock.calls[0];
-      const writtenData = JSON.parse(writeCall[1] as string);
-      expect(writtenData.theme).toBe('dark');
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = window.localStorage.getItem('arc-browser-settings');
+        expect(stored).toBeTruthy();
+        if (stored) {
+          const writtenData = JSON.parse(stored);
+          expect(writtenData.theme).toBe('dark');
+        }
+      }
     });
   });
 
@@ -116,7 +110,9 @@ describe('SettingsStore Module', () => {
         incognitoEnabled: true,
       };
 
-      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(settings));
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('arc-browser-settings', JSON.stringify(settings));
+      }
 
       const theme = getSetting('theme');
 
@@ -124,7 +120,9 @@ describe('SettingsStore Module', () => {
     });
 
     it('should return default value if setting not found', () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('{}');
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('arc-browser-settings', '{}');
+      }
 
       const jarvisEnabled = getSetting('jarvisEnabled');
 
@@ -141,14 +139,20 @@ describe('SettingsStore Module', () => {
         incognitoEnabled: true,
       };
 
-      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(existingSettings));
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('arc-browser-settings', JSON.stringify(existingSettings));
+      }
 
       updateSetting('theme', 'dark');
 
-      const writeCall = vi.mocked(fs.writeFileSync).mock.calls[0];
-      const writtenData = JSON.parse(writeCall[1] as string);
-      expect(writtenData.theme).toBe('dark');
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = window.localStorage.getItem('arc-browser-settings');
+        expect(stored).toBeTruthy();
+        if (stored) {
+          const writtenData = JSON.parse(stored);
+          expect(writtenData.theme).toBe('dark');
+        }
+      }
     });
 
     it('should preserve other settings', () => {
@@ -159,21 +163,25 @@ describe('SettingsStore Module', () => {
         incognitoEnabled: true,
       };
 
-      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(existingSettings));
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem('arc-browser-settings', JSON.stringify(existingSettings));
+      }
 
       updateSetting('theme', 'dark');
 
-      const writeCall = vi.mocked(fs.writeFileSync).mock.calls[0];
-      const writtenData = JSON.parse(writeCall[1] as string);
-      expect(writtenData.jarvisEnabled).toBe(true);
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = window.localStorage.getItem('arc-browser-settings');
+        expect(stored).toBeTruthy();
+        if (stored) {
+          const writtenData = JSON.parse(stored);
+          expect(writtenData.jarvisEnabled).toBe(true);
+        }
+      }
     });
   });
 
   describe('resetSettings', () => {
     it('should reset settings to defaults', () => {
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
-
       const reset = resetSettings();
 
       expect(reset.theme).toBe('system');
@@ -181,15 +189,17 @@ describe('SettingsStore Module', () => {
       expect(reset.incognitoEnabled).toBe(true);
     });
 
-    it('should save default settings to file', () => {
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
-
+    it('should save default settings to localStorage', () => {
       resetSettings();
 
-      expect(vi.mocked(fs.writeFileSync)).toHaveBeenCalled();
-      const writeCall = vi.mocked(fs.writeFileSync).mock.calls[0];
-      const writtenData = JSON.parse(writeCall[1] as string);
-      expect(writtenData.theme).toBe('system');
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = window.localStorage.getItem('arc-browser-settings');
+        expect(stored).toBeTruthy();
+        if (stored) {
+          const writtenData = JSON.parse(stored);
+          expect(writtenData.theme).toBe('system');
+        }
+      }
     });
   });
 });

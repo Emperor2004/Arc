@@ -8,6 +8,8 @@ declare global {
                 src?: string; 
                 allowpopups?: string;
                 partition?: string;
+                useragent?: string;
+                webpreferences?: string;
             }, HTMLElement>;
         }
     }
@@ -37,7 +39,7 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
                 // We need to cast to any because the Electron types for webview methods aren't easily available in standard React JSX
                 const title = (webview as any).getTitle();
                 const src = (webview as any).getURL();
-                console.log(`Page loaded: ${title} (Incognito: ${incognito})`);
+                console.log(`📄 Page loaded: ${title} (${src}) - Incognito: ${incognito}`);
                 
                 // Update tab title
                 if (onTitleUpdate) {
@@ -52,6 +54,14 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
                         tabId,
                         incognito 
                     });
+                    
+                    if (!incognito) {
+                        console.log('📚 History recorded for:', src);
+                    } else {
+                        console.log('🕶️ Skipping history (incognito):', src);
+                    }
+                } else {
+                    console.warn('⚠️ window.arc not available for history recording');
                 }
                 
                 // Trigger page loaded callback
@@ -84,13 +94,22 @@ const WebviewContainer: React.FC<WebviewContainerProps> = ({
     }
 
     // Use different partition for incognito tabs
-    const partition = incognito ? `arc-incognito-${tabId}` : undefined;
+    const partition = incognito ? `arc-incognito-${tabId}` : 'persist:arc-main';
+    
+    // Set a proper user agent to avoid being blocked by websites
+    const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+    
+    // Enable necessary web preferences for authentication
+    const webPreferences = 'nativeWindowOpen=yes';
 
     return (
         <webview
             ref={webviewRef}
             src={currentUrl}
             partition={partition}
+            useragent={userAgent}
+            webpreferences={webPreferences}
+            allowpopups="true"
             style={{ display: 'flex', flex: 1, width: '100%', height: '100%' }}
         />
     );

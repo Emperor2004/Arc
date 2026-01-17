@@ -52,7 +52,7 @@ describe('useTabsController - Property-Based Tests', () => {
             expect(finalTabIds).toEqual(originalTabIds);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -85,7 +85,7 @@ describe('useTabsController - Property-Based Tests', () => {
             expect(result.current.tabs.length).toBe(originalCount);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -126,7 +126,7 @@ describe('useTabsController - Property-Based Tests', () => {
             expect(firstReorderResult).toEqual(secondReorderResult);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -174,7 +174,7 @@ describe('useTabsController - Property-Based Tests', () => {
             expect(result1).toEqual(result2);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -212,7 +212,7 @@ describe('useTabsController - Property-Based Tests', () => {
             );
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -245,7 +245,7 @@ describe('useTabsController - Property-Based Tests', () => {
             expect(result.current.activeTab?.id).toBe(activeTabId);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });

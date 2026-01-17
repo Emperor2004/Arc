@@ -1,4 +1,4 @@
-import { getDatabase } from './database';
+import { getDatabaseManager } from './database';
 import { Tab } from './types';
 
 export interface TabSession {
@@ -25,19 +25,18 @@ let autoSaveTimer: NodeJS.Timeout | null = null;
 /**
  * Save session state to database
  */
-export function saveSession(state: SessionState): void {
+export async function saveSession(state: SessionState): Promise<void> {
   try {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      INSERT INTO sessions (tabs, activeTabId, timestamp, version)
-      VALUES (?, ?, ?, ?)
-    `);
-
-    stmt.run(
-      JSON.stringify(state.tabs),
-      state.activeTabId,
-      state.timestamp,
-      state.version
+    const db = await getDatabaseManager();
+    await db.execute(
+      `INSERT INTO sessions (tabs, activeTabId, timestamp, version)
+       VALUES (?, ?, ?, ?)`,
+      [
+        JSON.stringify(state.tabs),
+        state.activeTabId,
+        state.timestamp,
+        state.version
+      ]
     );
   } catch (error) {
     console.error('Error saving session:', error);
@@ -47,22 +46,21 @@ export function saveSession(state: SessionState): void {
 /**
  * Load the most recent session state from database
  */
-export function loadSession(): SessionState | null {
+export async function loadSession(): Promise<SessionState | null> {
   try {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      SELECT tabs, activeTabId, timestamp, version
-      FROM sessions
-      ORDER BY timestamp DESC
-      LIMIT 1
-    `);
-
-    const row = stmt.get() as any;
+    const db = await getDatabaseManager();
+    const rows = await db.query<any>(
+      `SELECT tabs, activeTabId, timestamp, version
+       FROM sessions
+       ORDER BY timestamp DESC
+       LIMIT 1`
+    );
     
-    if (!row) {
+    if (rows.length === 0) {
       return null;
     }
 
+    const row = rows[0];
     return {
       tabs: JSON.parse(row.tabs),
       activeTabId: row.activeTabId,
@@ -78,10 +76,10 @@ export function loadSession(): SessionState | null {
 /**
  * Clear all sessions from database
  */
-export function clearSession(): void {
+export async function clearSession(): Promise<void> {
   try {
-    const db = getDatabase();
-    db.prepare('DELETE FROM sessions').run();
+    const db = await getDatabaseManager();
+    await db.execute('DELETE FROM sessions');
   } catch (error) {
     console.error('Error clearing session:', error);
   }
@@ -90,18 +88,16 @@ export function clearSession(): void {
 /**
  * Get all sessions (for debugging/recovery)
  */
-export function getAllSessions(): SessionState[] {
+export async function getAllSessions(): Promise<SessionState[]> {
   try {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      SELECT tabs, activeTabId, timestamp, version
-      FROM sessions
-      ORDER BY timestamp DESC
-    `);
-
-    const rows = stmt.all() as any[];
+    const db = await getDatabaseManager();
+    const rows = await db.query<any>(
+      `SELECT tabs, activeTabId, timestamp, version
+       FROM sessions
+       ORDER BY timestamp DESC`
+    );
     
-    return rows.map(row => ({
+    return rows.map((row: any) => ({
       tabs: JSON.parse(row.tabs),
       activeTabId: row.activeTabId,
       timestamp: row.timestamp,
@@ -116,19 +112,18 @@ export function getAllSessions(): SessionState[] {
 /**
  * Delete old sessions (keep only last N sessions)
  */
-export function pruneOldSessions(keepCount: number = 10): void {
+export async function pruneOldSessions(keepCount: number = 10): Promise<void> {
   try {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      DELETE FROM sessions
-      WHERE id NOT IN (
-        SELECT id FROM sessions
-        ORDER BY timestamp DESC
-        LIMIT ?
-      )
-    `);
-
-    stmt.run(keepCount);
+    const db = await getDatabaseManager();
+    await db.execute(
+      `DELETE FROM sessions
+       WHERE id NOT IN (
+         SELECT id FROM sessions
+         ORDER BY timestamp DESC
+         LIMIT ?
+       )`,
+      [keepCount]
+    );
   } catch (error) {
     console.error('Error pruning old sessions:', error);
   }
@@ -145,7 +140,9 @@ export function startAutoSave(callback: () => SessionState): void {
   autoSaveTimer = setInterval(() => {
     try {
       const state = callback();
-      saveSession(state);
+      saveSession(state).catch(error => {
+        console.error('Error in auto-save:', error);
+      });
     } catch (error) {
       console.error('Error in auto-save:', error);
     }

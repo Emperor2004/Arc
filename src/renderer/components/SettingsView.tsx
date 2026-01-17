@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useSettingsController } from '../hooks/useSettingsController';
+import { useSettings } from '../contexts/SettingsContext';
 import ThemeSelector from './ThemeSelector';
 import DataExportImport from './DataExportImport';
 import PersonalizationSettings from './PersonalizationSettings';
@@ -9,15 +9,18 @@ import { getThemeManager } from '../../core/themeManager';
 export interface SettingsViewProps {}
 
 const SettingsView: React.FC<SettingsViewProps> = () => {
-    const { settings, loading, updateSetting } = useSettingsController();
+    const { settings, loading, updateSettings } = useSettings();
     const [message, setMessage] = useState<string | null>(null);
+    const [siteUrl, setSiteUrl] = useState<string>('');
+    const [siteCookies, setSiteCookies] = useState<any[]>([]);
+    const [showSiteCookies, setShowSiteCookies] = useState<boolean>(false);
 
     const handleUpdateSetting = async <K extends keyof typeof settings>(
         key: K,
         value: typeof settings[K]
     ) => {
         try {
-            await updateSetting(key, value);
+            await updateSettings({ [key]: value });
             showMessage('Settings saved');
         } catch (error) {
             showMessage('Failed to save settings');
@@ -63,6 +66,91 @@ const SettingsView: React.FC<SettingsViewProps> = () => {
                 showMessage('Failed to clear feedback');
             }
         }
+    };
+
+    const handleClearCookies = async () => {
+        if (window.confirm('Are you sure you want to clear all cookies? This will log you out of all websites and cannot be undone.')) {
+            try {
+                console.log('🎨 [UI] Clearing cookies...');
+                if (window.arc && window.arc.clearCookies) {
+                    const result = await window.arc.clearCookies();
+                    console.log('🎨 [UI] Clear cookies result:', result);
+                    if (result.ok) {
+                        showMessage(`Successfully cleared ${result.cleared} cookie${result.cleared !== 1 ? 's' : ''}!`);
+                    } else {
+                        showMessage(`Failed to clear cookies${result.error ? ': ' + result.error : ''}`);
+                    }
+                }
+            } catch (error) {
+                console.error('🎨 [UI] Failed to clear cookies:', error);
+                showMessage('Failed to clear cookies');
+            }
+        }
+    };
+
+    const handleViewSiteCookies = async () => {
+        if (!siteUrl.trim()) {
+            showMessage('Please enter a URL');
+            return;
+        }
+
+        try {
+            if (window.arc && window.arc.getCookies) {
+                const result = await window.arc.getCookies({ url: siteUrl });
+                if (result.ok) {
+                    setSiteCookies(result.cookies);
+                    setShowSiteCookies(true);
+                    if (result.cookies.length === 0) {
+                        showMessage('No cookies found for this site');
+                    } else {
+                        showMessage(`Found ${result.cookies.length} cookie${result.cookies.length !== 1 ? 's' : ''} for this site`);
+                    }
+                } else {
+                    showMessage(`Failed to get cookies${result.error ? ': ' + result.error : ''}`);
+                    setSiteCookies([]);
+                    setShowSiteCookies(false);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to get cookies:', error);
+            showMessage('Failed to get cookies');
+            setSiteCookies([]);
+            setShowSiteCookies(false);
+        }
+    };
+
+    const handleClearSiteCookies = async () => {
+        if (!siteUrl.trim()) {
+            showMessage('Please enter a URL');
+            return;
+        }
+
+        if (window.confirm(`Are you sure you want to clear cookies for ${siteUrl}? This will log you out of this site.`)) {
+            try {
+                if (window.arc && window.arc.clearCookiesForUrl) {
+                    const result = await window.arc.clearCookiesForUrl(siteUrl);
+                    if (result.ok) {
+                        showMessage(`Successfully cleared ${result.cleared} cookie${result.cleared !== 1 ? 's' : ''} for this site!`);
+                        // Refresh the cookie list
+                        setSiteCookies([]);
+                        setShowSiteCookies(false);
+                    } else {
+                        showMessage(`Failed to clear cookies${result.error ? ': ' + result.error : ''}`);
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to clear cookies for URL:', error);
+                showMessage('Failed to clear cookies for this site');
+            }
+        }
+    };
+
+    const formatExpirationDate = (timestamp?: number): string => {
+        if (!timestamp) {
+            return 'Session';
+        }
+        const date = new Date(timestamp * 1000);
+        return date.toLocaleString();
     };
 
     const handleClearSession = async () => {
@@ -308,6 +396,179 @@ const SettingsView: React.FC<SettingsViewProps> = () => {
                             </div>
                             <div id="clear-feedback-desc" className="sr-only">
                                 This action will reset all Jarvis feedback and recommendation preferences and cannot be undone
+                            </div>
+                        </div>
+
+                        <div className="settings-item">
+                            <div className="settings-action">
+                                <div className="settings-action-content">
+                                    <span>Clear all cookies</span>
+                                    <span className="settings-description">
+                                        Remove all cookies stored by websites. This will log you out of all sites.
+                                    </span>
+                                </div>
+                                <button 
+                                    className="btn-danger"
+                                    onClick={handleClearCookies}
+                                    aria-describedby="clear-cookies-desc"
+                                >
+                                    Clear Cookies
+                                </button>
+                            </div>
+                            <div id="clear-cookies-desc" className="sr-only">
+                                This action will permanently delete all cookies and log you out of all websites. This cannot be undone.
+                            </div>
+                        </div>
+
+                        <div className="settings-item">
+                            <div className="settings-action">
+                                <div className="settings-action-content">
+                                    <span>View cookies for a specific site</span>
+                                    <span className="settings-description">
+                                        Inspect and manage cookies for a particular website
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div style={{ marginTop: '12px' }}>
+                                <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                    <input
+                                        type="text"
+                                        value={siteUrl}
+                                        onChange={(e) => setSiteUrl(e.target.value)}
+                                        placeholder="Enter website URL (e.g., https://example.com)"
+                                        style={{
+                                            flex: 1,
+                                            padding: '8px 12px',
+                                            background: 'rgba(255, 255, 255, 0.05)',
+                                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                                            borderRadius: '6px',
+                                            color: '#e5e7eb',
+                                            fontSize: '14px'
+                                        }}
+                                        aria-label="Website URL for cookie inspection"
+                                    />
+                                    <button
+                                        onClick={handleViewSiteCookies}
+                                        style={{
+                                            padding: '8px 16px',
+                                            background: 'rgba(59, 130, 246, 0.8)',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            color: 'white',
+                                            cursor: 'pointer',
+                                            fontSize: '14px',
+                                            fontWeight: '500'
+                                        }}
+                                        aria-label="View cookies for entered URL"
+                                    >
+                                        View Cookies
+                                    </button>
+                                </div>
+
+                                {showSiteCookies && (
+                                    <div style={{
+                                        background: 'rgba(255, 255, 255, 0.03)',
+                                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                                        borderRadius: '8px',
+                                        padding: '16px',
+                                        marginTop: '12px'
+                                    }}>
+                                        {siteCookies.length === 0 ? (
+                                            <p style={{ color: '#9ca3af', margin: 0 }}>
+                                                No cookies found for this site
+                                            </p>
+                                        ) : (
+                                            <>
+                                                <div style={{ 
+                                                    display: 'flex', 
+                                                    justifyContent: 'space-between', 
+                                                    alignItems: 'center',
+                                                    marginBottom: '12px'
+                                                }}>
+                                                    <h3 style={{ 
+                                                        margin: 0, 
+                                                        fontSize: '14px', 
+                                                        fontWeight: '600',
+                                                        color: '#e5e7eb'
+                                                    }}>
+                                                        Cookies ({siteCookies.length})
+                                                    </h3>
+                                                    <button
+                                                        onClick={handleClearSiteCookies}
+                                                        style={{
+                                                            padding: '6px 12px',
+                                                            background: 'rgba(239, 68, 68, 0.8)',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            color: 'white',
+                                                            cursor: 'pointer',
+                                                            fontSize: '12px',
+                                                            fontWeight: '500'
+                                                        }}
+                                                        aria-label="Clear cookies for this site"
+                                                    >
+                                                        Clear Site Cookies
+                                                    </button>
+                                                </div>
+                                                <div style={{
+                                                    maxHeight: '300px',
+                                                    overflowY: 'auto'
+                                                }}>
+                                                    {siteCookies.map((cookie, index) => (
+                                                        <div
+                                                            key={index}
+                                                            style={{
+                                                                padding: '12px',
+                                                                background: 'rgba(255, 255, 255, 0.02)',
+                                                                border: '1px solid rgba(255, 255, 255, 0.05)',
+                                                                borderRadius: '6px',
+                                                                marginBottom: '8px'
+                                                            }}
+                                                        >
+                                                            <div style={{ 
+                                                                display: 'grid', 
+                                                                gap: '6px',
+                                                                fontSize: '13px'
+                                                            }}>
+                                                                <div>
+                                                                    <strong style={{ color: '#60a5fa' }}>Name:</strong>{' '}
+                                                                    <span style={{ color: '#e5e7eb' }}>{cookie.name}</span>
+                                                                </div>
+                                                                <div>
+                                                                    <strong style={{ color: '#60a5fa' }}>Domain:</strong>{' '}
+                                                                    <span style={{ color: '#e5e7eb' }}>{cookie.domain}</span>
+                                                                </div>
+                                                                <div>
+                                                                    <strong style={{ color: '#60a5fa' }}>Path:</strong>{' '}
+                                                                    <span style={{ color: '#e5e7eb' }}>{cookie.path}</span>
+                                                                </div>
+                                                                <div>
+                                                                    <strong style={{ color: '#60a5fa' }}>Expires:</strong>{' '}
+                                                                    <span style={{ color: '#e5e7eb' }}>
+                                                                        {formatExpirationDate(cookie.expirationDate)}
+                                                                    </span>
+                                                                </div>
+                                                                <div>
+                                                                    <strong style={{ color: '#60a5fa' }}>Secure:</strong>{' '}
+                                                                    <span style={{ color: '#e5e7eb' }}>
+                                                                        {cookie.secure ? 'Yes' : 'No'}
+                                                                    </span>
+                                                                </div>
+                                                                <div>
+                                                                    <strong style={{ color: '#60a5fa' }}>HttpOnly:</strong>{' '}
+                                                                    <span style={{ color: '#e5e7eb' }}>
+                                                                        {cookie.httpOnly ? 'Yes' : 'No'}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

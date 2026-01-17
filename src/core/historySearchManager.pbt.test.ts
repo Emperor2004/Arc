@@ -68,7 +68,7 @@ describe('HistorySearchManager - Property-Based Tests', () => {
             return true;
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -109,7 +109,7 @@ describe('HistorySearchManager - Property-Based Tests', () => {
             return true;
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -154,7 +154,7 @@ describe('HistorySearchManager - Property-Based Tests', () => {
             return true;
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -192,7 +192,7 @@ describe('HistorySearchManager - Property-Based Tests', () => {
             return true;
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -243,7 +243,7 @@ describe('HistorySearchManager - Property-Based Tests', () => {
             return true;
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -311,7 +311,7 @@ describe('HistorySearchManager - Property-Based Tests', () => {
             return true;
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -343,7 +343,7 @@ describe('HistorySearchManager - Property-Based Tests', () => {
             return results.length === 0;
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });

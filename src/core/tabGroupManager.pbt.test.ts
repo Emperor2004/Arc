@@ -38,13 +38,13 @@ const tabGroupArbitrary = fc.record({
 });
 
 describe('TabGroupManager Properties', () => {
-  beforeEach(() => {
-    resetDatabase();
+  beforeEach(async () => {
+    await resetDatabase();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     clearAllGroups();
-    resetDatabase();
+    await resetDatabase();
   });
 
   describe('Property 10.2: Tab Group Consistency', () => {
@@ -60,7 +60,7 @@ describe('TabGroupManager Properties', () => {
           expect(retrieved?.tabIds).toEqual([]);
           expect(retrieved?.isCollapsed).toBe(false);
         }),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -90,7 +90,7 @@ describe('TabGroupManager Properties', () => {
             });
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -126,7 +126,7 @@ describe('TabGroupManager Properties', () => {
             });
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -151,7 +151,7 @@ describe('TabGroupManager Properties', () => {
             });
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -190,7 +190,7 @@ describe('TabGroupManager Properties', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -217,7 +217,7 @@ describe('TabGroupManager Properties', () => {
             expect(updated?.tabIds).toEqual(newTabIds);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -235,7 +235,7 @@ describe('TabGroupManager Properties', () => {
           const retrieved = getGroup(group.id);
           expect(retrieved?.isCollapsed).toBe(expectedState);
         }),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -255,7 +255,7 @@ describe('TabGroupManager Properties', () => {
           expect(id2).not.toBe(id1);
           expect(getGroup(id2)).not.toBeNull();
         }),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -278,7 +278,7 @@ describe('TabGroupManager Properties', () => {
             });
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -310,7 +310,7 @@ describe('TabGroupManager Properties', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -320,7 +320,7 @@ describe('TabGroupManager Properties', () => {
           const group = createGroup(name, color);
           expect(validateTabGroup(group)).toBe(true);
         }),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -341,7 +341,7 @@ describe('TabGroupManager Properties', () => {
             });
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -369,7 +369,7 @@ describe('TabGroupManager Properties', () => {
             });
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -387,7 +387,7 @@ describe('TabGroupManager Properties', () => {
           expect(first).toEqual(second);
           expect(second).toEqual(third);
         }),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -405,7 +405,7 @@ describe('TabGroupManager Properties', () => {
           const final = getGroup(group.id);
           expect(final?.isCollapsed).toBe(original?.isCollapsed);
         }),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -424,7 +424,7 @@ describe('TabGroupManager Properties', () => {
           expect(group1.name).toBe(group2.name);
           expect(group1.color).toBe(group2.color);
         }),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });

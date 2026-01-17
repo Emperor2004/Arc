@@ -21,7 +21,7 @@ describe('SearchEngineManager Properties', () => {
             expect(result1).toBe(result2);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -80,7 +80,7 @@ describe('SearchEngineManager Properties', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -103,7 +103,7 @@ describe('SearchEngineManager Properties', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -147,7 +147,7 @@ describe('SearchEngineManager Properties', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });

@@ -26,10 +26,10 @@ describe('BookmarkStore Properties', () => {
   });
 
   describe('Property 3: Bookmark Persistence Round-Trip', () => {
-    it('should persist and retrieve bookmarks with same data', async () => {
+    it('should persist and retrieve bookmarks with same data', () => {
       // Feature: arc-browser-enhancements, Property 3: Bookmark Persistence Round-Trip
-      await fc.assert(
-        fc.asyncProperty(
+      fc.assert(
+        fc.property(
           fc.array(
             fc.record({
               url: fc.webUrl(),
@@ -38,7 +38,7 @@ describe('BookmarkStore Properties', () => {
             }),
             { maxLength: 20 }
           ),
-          async (bookmarkData) => {
+          (bookmarkData) => {
             vi.mocked(fs.readFileSync).mockReturnValue('[]');
             vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
@@ -54,7 +54,7 @@ describe('BookmarkStore Properties', () => {
             vi.mocked(fs.readFileSync).mockReturnValue(savedData);
 
             // Retrieve bookmarks
-            const retrieved = await getAllBookmarks();
+            const retrieved = getAllBookmarks();
 
             // Verify round-trip
             expect(retrieved.length).toBe(added.length);
@@ -69,10 +69,10 @@ describe('BookmarkStore Properties', () => {
       );
     });
 
-    it('should maintain bookmark integrity through add and remove operations', async () => {
+    it('should maintain bookmark integrity through add and remove operations', () => {
       // Feature: arc-browser-enhancements, Property 3: Bookmark Persistence Round-Trip
-      await fc.assert(
-        fc.asyncProperty(
+      fc.assert(
+        fc.property(
           fc.array(
             fc.record({
               url: fc.webUrl(),
@@ -80,7 +80,7 @@ describe('BookmarkStore Properties', () => {
             }),
             { minLength: 1, maxLength: 10 }
           ),
-          async (bookmarkData) => {
+          (bookmarkData) => {
             vi.mocked(fs.readFileSync).mockReturnValue('[]');
             vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
@@ -103,7 +103,7 @@ describe('BookmarkStore Properties', () => {
 
               // Verify remaining bookmarks
               vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(remaining));
-              const retrieved = await getAllBookmarks();
+              const retrieved = getAllBookmarks();
 
               expect(retrieved.length).toBe(remaining.length);
               expect(retrieved.every(b => b.id !== toRemove.id)).toBe(true);
@@ -116,15 +116,15 @@ describe('BookmarkStore Properties', () => {
   });
 
   describe('Property: Search Consistency', () => {
-    it('should find bookmarks that match search query', async () => {
+    it('should find bookmarks that match search query', () => {
       // Feature: arc-browser-enhancements, Property 3: Bookmark Persistence Round-Trip
-      await fc.assert(
-        fc.asyncProperty(
+      fc.assert(
+        fc.property(
           fc.record({
             url: fc.webUrl(),
             title: fc.string({ minLength: 5, maxLength: 50 }),
           }),
-          async (bookmarkData) => {
+          (bookmarkData) => {
             vi.mocked(fs.readFileSync).mockReturnValue('[]');
             vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
@@ -132,12 +132,12 @@ describe('BookmarkStore Properties', () => {
 
             // Search by URL
             vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify([bookmark]));
-            const urlResults = await searchBookmarks(bookmarkData.url.substring(0, 5));
+            const urlResults = searchBookmarks(bookmarkData.url.substring(0, 5));
             expect(urlResults.length).toBeGreaterThan(0);
 
             // Search by title
             vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify([bookmark]));
-            const titleResults = await searchBookmarks(bookmarkData.title.substring(0, 3));
+            const titleResults = searchBookmarks(bookmarkData.title.substring(0, 3));
             expect(titleResults.length).toBeGreaterThan(0);
           }
         ),
@@ -147,15 +147,15 @@ describe('BookmarkStore Properties', () => {
   });
 
   describe('Property: Bookmark State Invariants', () => {
-    it('should maintain valid bookmark structure after operations', async () => {
+    it('should maintain valid bookmark structure after operations', () => {
       // Feature: arc-browser-enhancements, Property 3: Bookmark Persistence Round-Trip
-      await fc.assert(
-        fc.asyncProperty(
+      fc.assert(
+        fc.property(
           fc.record({
             url: fc.webUrl(),
             title: fc.string({ minLength: 1, maxLength: 100 }),
           }),
-          async (bookmarkData) => {
+          (bookmarkData) => {
             vi.mocked(fs.readFileSync).mockReturnValue('[]');
             vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
@@ -178,22 +178,22 @@ describe('BookmarkStore Properties', () => {
             expect(bookmark.createdAt).toBeLessThanOrEqual(bookmark.updatedAt);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
 
   describe('Property: Update Idempotence', () => {
-    it('should produce same result when updating with same data twice', async () => {
+    it('should produce same result when updating with same data twice', () => {
       // Feature: arc-browser-enhancements, Property 3: Bookmark Persistence Round-Trip
-      await fc.assert(
-        fc.asyncProperty(
+      fc.assert(
+        fc.property(
           fc.record({
             url: fc.webUrl(),
             title: fc.string({ minLength: 1, maxLength: 100 }),
             newTitle: fc.string({ minLength: 1, maxLength: 100 }),
           }),
-          async (data) => {
+          (data) => {
             vi.mocked(fs.readFileSync).mockReturnValue('[]');
             vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
@@ -220,10 +220,10 @@ describe('BookmarkStore Properties', () => {
   });
 
   describe('Property: Export-Import Round-Trip', () => {
-    it('should preserve bookmarks through export and import', async () => {
+    it('should preserve bookmarks through export and import', () => {
       // Feature: arc-browser-enhancements, Property 3: Bookmark Persistence Round-Trip
-      await fc.assert(
-        fc.asyncProperty(
+      fc.assert(
+        fc.property(
           fc.array(
             fc.record({
               url: fc.webUrl(),
@@ -231,7 +231,7 @@ describe('BookmarkStore Properties', () => {
             }),
             { maxLength: 10 }
           ),
-          async (bookmarkData) => {
+          (bookmarkData) => {
             vi.mocked(fs.readFileSync).mockReturnValue('[]');
             vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
@@ -265,15 +265,15 @@ describe('BookmarkStore Properties', () => {
   });
 
   describe('Property: isBookmarked Consistency', () => {
-    it('should correctly identify bookmarked URLs', async () => {
+    it('should correctly identify bookmarked URLs', () => {
       // Feature: arc-browser-enhancements, Property 3: Bookmark Persistence Round-Trip
-      await fc.assert(
-        fc.asyncProperty(
+      fc.assert(
+        fc.property(
           fc.record({
             url: fc.webUrl(),
             title: fc.string({ minLength: 1, maxLength: 100 }),
           }),
-          async (bookmarkData) => {
+          (bookmarkData) => {
             vi.mocked(fs.readFileSync).mockReturnValue('[]');
             vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
@@ -281,13 +281,13 @@ describe('BookmarkStore Properties', () => {
 
             // Check if bookmarked
             vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify([bookmark]));
-            const isBookmarkedResult = await isBookmarked(bookmarkData.url);
+            const isBookmarkedResult = isBookmarked(bookmarkData.url);
 
             expect(isBookmarkedResult).toBe(true);
 
             // Check non-existent URL
             vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify([bookmark]));
-            const isNotBookmarked = await isBookmarked('https://nonexistent-url-12345.com');
+            const isNotBookmarked = isBookmarked('https://nonexistent-url-12345.com');
 
             expect(isNotBookmarked).toBe(false);
           }

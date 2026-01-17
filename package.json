@@ -1,12 +1,12 @@
 {
   "name": "arc-browser",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "description": "Arc Browser - Electron + React + TypeScript",
   "main": "dist/main/main.js",
   "scripts": {
     "dev": "concurrently \"npm run dev:renderer\" \"npm run dev:main\"",
     "dev:renderer": "vite",
-    "dev:main": "set NODE_ENV=development && tsc -p tsconfig.main.json && electron dist/main/main.js",
+    "dev:main": "cross-env NODE_ENV=development tsc -p tsconfig.main.json && electron dist/main/main.js",
     "build": "npm run build:renderer && npm run build:main",
     "build:renderer": "vite build",
     "build:main": "tsc -p tsconfig.main.json",
@@ -23,6 +23,8 @@
     "performance:profile": "npm run build:main && node --inspect dist/test/performance/runBenchmarks.js",
     "performance:memory": "npm run build:main && node --max-old-space-size=512 dist/test/performance/runBenchmarks.js",
     "performance:optimize": "npm run build:main && node dist/core/performance/optimizeApp.js",
+    "rebuild": "npx electron-rebuild -f -w better-sqlite3",
+    "rebuild:all": "npx electron-rebuild -f",
     "package": "electron-builder --dir --publish=never",
     "package:installer": "electron-builder",
     "package:simple": "electron-packager . arc-browser --platform=win32 --arch=x64 --out=release --overwrite",
@@ -41,6 +43,7 @@
     "@vitest/coverage-v8": "^0.34.0",
     "@vitest/ui": "^0.34.0",
     "concurrently": "^8.2.0",
+    "cross-env": "^10.1.0",
     "electron": "^25.0.0",
     "electron-builder": "^24.0.0",
     "electron-packager": "^17.1.2",
@@ -54,7 +57,7 @@
     "vitest": "^0.34.0"
   },
   "dependencies": {
-    "better-sqlite3": "^12.5.0",
+    "better-sqlite3": "^12.6.0",
     "react": "^18.2.0",
     "react-beautiful-dnd": "^13.1.1",
     "react-dom": "^18.2.0"

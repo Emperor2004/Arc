@@ -7,9 +7,22 @@ exports.buildFeedbackMap = buildFeedbackMap;
 exports.applyFeedbackToScore = applyFeedbackToScore;
 exports.calculateTemporalWeight = calculateTemporalWeight;
 exports.clearRecommendationCache = clearRecommendationCache;
+// Use Main version if in main process, otherwise use localStorage version
+const historyStoreMain_1 = require("./historyStoreMain");
 const historyStore_1 = require("./historyStore");
 const feedbackStore_1 = require("./feedbackStore");
 const personalizationManager_1 = require("./personalizationManager");
+// Detect if we're in main process
+function isMainProcess() {
+    try {
+        return typeof process !== 'undefined' && process.type !== 'renderer';
+    }
+    catch {
+        return false;
+    }
+}
+// Use appropriate version based on process
+const getHistory = isMainProcess() ? historyStoreMain_1.getRecentHistory : historyStore_1.getRecentHistory;
 let recommendationCache = null;
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 function hashPersonalizationSettings(settings) {
@@ -140,10 +153,12 @@ async function getJarvisRecommendations(limit = 5) {
     if (recommendationCache &&
         (now - recommendationCache.timestamp) < CACHE_DURATION &&
         recommendationCache.settingsHash === settingsHash) {
+        console.log('💡 [Recommender] Using cached recommendations:', recommendationCache.recommendations.length);
         return recommendationCache.recommendations.slice(0, effectiveLimit);
     }
-    const history = await (0, historyStore_1.getRecentHistory)(200);
+    const history = await getHistory(200);
     const feedback = await (0, feedbackStore_1.getAllFeedback)();
+    console.log(`💡 [Recommender] Loaded ${history.length} history entries and ${feedback.length} feedback entries`);
     const feedbackMap = buildFeedbackMap(feedback);
     const domainMap = new Map();
     // 1. Aggregate stats by domain
@@ -166,8 +181,11 @@ async function getJarvisRecommendations(limit = 5) {
         domainMap.set(domain, stats);
     }
     const allStats = Array.from(domainMap.values());
-    if (allStats.length === 0)
+    console.log(`💡 [Recommender] Aggregated ${allStats.length} unique domains from history`);
+    if (allStats.length === 0) {
+        console.log('💡 [Recommender] No history found, returning empty recommendations');
         return [];
+    }
     // Calculate max visit count for normalization
     const maxVisits = Math.max(...allStats.map(s => s.visitCount));
     const now_ms = Date.now();
@@ -307,6 +325,7 @@ async function getJarvisRecommendations(limit = 5) {
     const finalRecommendations = candidates
         .sort((a, b) => b.score - a.score)
         .slice(0, effectiveLimit);
+    console.log(`💡 [Recommender] Generated ${candidates.length} candidates, returning top ${finalRecommendations.length}`);
     // Cache the results
     recommendationCache = {
         recommendations: finalRecommendations,

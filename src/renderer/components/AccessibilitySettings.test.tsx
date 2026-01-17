@@ -21,19 +21,23 @@ vi.mock('../hooks/useSettingsController', () => ({
   }),
 }));
 
-// Mock matchMedia
+// Mock matchMedia - ensure it's always available
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
+  configurable: true,
+  value: vi.fn().mockImplementation((query: string) => {
+    const mockMediaQueryList = {
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+    return mockMediaQueryList;
+  }),
 });
 
 describe('AccessibilitySettings', () => {

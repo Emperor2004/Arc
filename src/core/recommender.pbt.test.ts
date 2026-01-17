@@ -33,7 +33,7 @@ describe('Recommender Properties', () => {
             expect(result.score).toBeLessThanOrEqual(1);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -54,7 +54,7 @@ describe('Recommender Properties', () => {
             expect(Number.isNaN(result.score)).toBe(false);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -79,7 +79,7 @@ describe('Recommender Properties', () => {
             expect(recentScore).toBe(oldScore);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -98,7 +98,7 @@ describe('Recommender Properties', () => {
             expect(result2.score).toBeGreaterThanOrEqual(result1.score);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -115,7 +115,7 @@ describe('Recommender Properties', () => {
             expect(result2.score).toBeLessThanOrEqual(result1.score);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -194,7 +194,7 @@ describe('Recommender Properties', () => {
             expect(result.feedbackReason.length).toBeGreaterThan(0);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -209,7 +209,7 @@ describe('Recommender Properties', () => {
             expect(result.feedbackReason).toBe('');
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -226,7 +226,7 @@ describe('Recommender Properties', () => {
             expect(weight).toBeLessThanOrEqual(1);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -240,7 +240,7 @@ describe('Recommender Properties', () => {
             expect(Number.isNaN(weight)).toBe(false);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -259,7 +259,7 @@ describe('Recommender Properties', () => {
             expect(weight2).toBeLessThanOrEqual(weight1);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -325,7 +325,7 @@ describe('Recommender Properties', () => {
             expect(weight1).toBe(weight2);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });

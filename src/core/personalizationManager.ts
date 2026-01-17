@@ -20,6 +20,7 @@ export interface RecommendationPersonalization {
   maxRecommendations: number; // 1 to 20, default 5
   ollamaModel?: string;       // Ollama model name (e.g., 'mistral', 'neural-chat')
   ollamaEnabled?: boolean;    // Enable Ollama for enhanced recommendations
+  ollamaEndpoint?: string;    // Ollama server endpoint (default: 'http://localhost:11434')
 }
 
 export interface PersonalizationManager {
@@ -37,6 +38,7 @@ const DEFAULT_PERSONALIZATION: RecommendationPersonalization = {
   maxRecommendations: 5,
   ollamaModel: 'mistral',
   ollamaEnabled: false,
+  ollamaEndpoint: 'http://localhost:11434',
 };
 
 /**
@@ -46,6 +48,11 @@ export function getPersonalizationSettings(): RecommendationPersonalization {
   const settings = getSettings();
   
   // Extract personalization settings from main settings, use defaults if not present
+  // Handle case where settings might be undefined or missing properties
+  if (!settings) {
+    return DEFAULT_PERSONALIZATION;
+  }
+  
   return {
     recencyWeight: settings.recencyWeight ?? DEFAULT_PERSONALIZATION.recencyWeight,
     frequencyWeight: settings.frequencyWeight ?? DEFAULT_PERSONALIZATION.frequencyWeight,
@@ -54,6 +61,7 @@ export function getPersonalizationSettings(): RecommendationPersonalization {
     maxRecommendations: settings.maxRecommendations ?? DEFAULT_PERSONALIZATION.maxRecommendations,
     ollamaModel: settings.ollamaModel ?? DEFAULT_PERSONALIZATION.ollamaModel,
     ollamaEnabled: settings.ollamaEnabled ?? DEFAULT_PERSONALIZATION.ollamaEnabled,
+    ollamaEndpoint: settings.ollamaEndpoint ?? DEFAULT_PERSONALIZATION.ollamaEndpoint,
   };
 }
 
@@ -144,15 +152,49 @@ export function applyPersonalization(
 
 /**
  * Get available Ollama models
- * This is a placeholder implementation - in a real system this would query Ollama API
+ * Queries the Ollama API to get list of installed models
  */
 export async function getOllamaModels(): Promise<string[]> {
-  // Placeholder implementation - would normally query Ollama API
-  // For now, return common model names
+  try {
+    // Try to import Ollama client
+    const { getOllamaClient } = await import('./ollamaClient');
+    
+    // Get Ollama endpoint from settings
+    const settings = getPersonalizationSettings();
+    const ollamaEndpoint = settings.ollamaEndpoint || 'http://localhost:11434';
+    
+    const client = getOllamaClient(ollamaEndpoint);
+    
+    // Check if Ollama is available
+    const available = await client.isAvailable();
+    if (!available) {
+      console.warn('Ollama server is not running at', ollamaEndpoint, ', returning default models');
+      return getDefaultOllamaModels();
+    }
+    
+    // Get models from Ollama
+    const models = await client.listModels();
+    
+    if (models.length === 0) {
+      console.warn('No Ollama models installed, returning default models');
+      return getDefaultOllamaModels();
+    }
+    
+    return models.map(m => m.name);
+  } catch (error) {
+    console.error('Error fetching Ollama models:', error);
+    return getDefaultOllamaModels();
+  }
+}
+
+/**
+ * Get default Ollama model names (fallback when Ollama is not available)
+ */
+function getDefaultOllamaModels(): string[] {
   return [
+    'llama2',
     'mistral',
     'neural-chat',
-    'llama2',
     'codellama',
     'vicuna',
     'orca-mini',
@@ -209,6 +251,7 @@ export function resetPersonalizationSettings(): RecommendationPersonalization {
     maxRecommendations: DEFAULT_PERSONALIZATION.maxRecommendations,
     ollamaModel: DEFAULT_PERSONALIZATION.ollamaModel,
     ollamaEnabled: DEFAULT_PERSONALIZATION.ollamaEnabled,
+    ollamaEndpoint: DEFAULT_PERSONALIZATION.ollamaEndpoint,
   });
   
   return DEFAULT_PERSONALIZATION;

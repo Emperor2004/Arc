@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useEffect } from 'react';
 
 export interface KeyboardShortcutHandlers {
   newTab: () => void;
@@ -13,24 +13,14 @@ export interface KeyboardShortcutHandlers {
 
 /**
  * Hook to provide keyboard shortcut handlers
- * These handlers are called by the KeyboardShortcutManager in the App component
+ * The window.arc methods are already defined in preload.ts and handle IPC communication
+ * This hook just ensures the handlers are available for local use
  */
 export function useKeyboardShortcuts(handlers: KeyboardShortcutHandlers): void {
-  // Expose handlers on window.arc for keyboard shortcut manager to call
-  const exposeHandlers = useCallback(() => {
-    if (window.arc) {
-      // Override the methods with the actual handlers
-      window.arc.newTab = handlers.newTab;
-      window.arc.newIncognitoTab = handlers.newIncognitoTab;
-      window.arc.closeTab = handlers.closeTab;
-      window.arc.nextTab = handlers.nextTab;
-      window.arc.previousTab = handlers.previousTab;
-      window.arc.focusAddressBar = handlers.focusAddressBar;
-      window.arc.reloadPage = handlers.reloadPage;
-      window.arc.clearData = handlers.clearData;
+  // Store handlers in a global object for keyboard shortcut manager access
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).arcHandlers = handlers;
     }
   }, [handlers]);
-
-  // Expose handlers when they change
-  exposeHandlers();
 }

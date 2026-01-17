@@ -56,6 +56,31 @@ const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete, onMax
 
     const isIncognitoActive = activeTab?.incognito || false;
 
+    // Define navigation handlers before they're used
+    const handleReload = () => {
+        const webview = document.querySelector('webview');
+        if (webview) {
+            (webview as any).reload();
+            logAction('Browser reload');
+        }
+    };
+
+    const handleBack = () => {
+        const webview = document.querySelector('webview');
+        if (webview && (webview as any).canGoBack()) {
+            (webview as any).goBack();
+            logAction('Browser back navigation');
+        }
+    };
+
+    const handleForward = () => {
+        const webview = document.querySelector('webview');
+        if (webview && (webview as any).canGoForward()) {
+            (webview as any).goForward();
+            logAction('Browser forward navigation');
+        }
+    };
+
     // Expose keyboard shortcut handlers
     useKeyboardShortcuts({
         newTab: handleNewTab,
@@ -106,6 +131,29 @@ const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete, onMax
         }
     }, [activeTab, isIncognitoActive, updateDebugState, logAction]);
 
+    // Listen for navigation events from main process
+    React.useEffect(() => {
+        if (window.arc && window.arc.onNavigation) {
+            const handleNavigationEvent = (_event: any, url: string) => {
+                console.log('📍 [BrowserShell] Navigation event received:', url);
+                
+                // Find the active tab and navigate its webview
+                if (activeTab) {
+                    console.log(`📍 [BrowserShell] Updating active tab ${activeTab.id} to URL: ${url}`);
+                    // Update the tab's URL
+                    updateActiveTabUrl(url);
+                    setUrl(url);
+                    
+                    logAction(`Navigation event: ${url}`);
+                } else {
+                    console.warn('⚠️ [BrowserShell] No active tab for navigation');
+                }
+            };
+            
+            window.arc.onNavigation(handleNavigationEvent);
+        }
+    }, [activeTab, updateActiveTabUrl, setUrl, logAction]);
+
     const handleNavigate = () => {
         let targetUrl = url;
         
@@ -126,30 +174,6 @@ const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete, onMax
             }
         } else {
             console.warn('window.arc is not defined or no active tab');
-        }
-    };
-
-    const handleBack = () => {
-        const webview = document.querySelector('webview');
-        if (webview && (webview as any).canGoBack()) {
-            (webview as any).goBack();
-            logAction('Browser back navigation');
-        }
-    };
-
-    const handleForward = () => {
-        const webview = document.querySelector('webview');
-        if (webview && (webview as any).canGoForward()) {
-            (webview as any).goForward();
-            logAction('Browser forward navigation');
-        }
-    };
-
-    const handleReload = () => {
-        const webview = document.querySelector('webview');
-        if (webview) {
-            (webview as any).reload();
-            logAction('Browser reload');
         }
     };
 

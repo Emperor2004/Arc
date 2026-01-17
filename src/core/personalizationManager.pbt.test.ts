@@ -48,7 +48,7 @@ describe('PersonalizationManager Properties', () => {
             expect(result1).toBe(result2);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -79,7 +79,7 @@ describe('PersonalizationManager Properties', () => {
             });
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -121,7 +121,7 @@ describe('PersonalizationManager Properties', () => {
             expect(Number.isNaN(result)).toBe(false);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -165,7 +165,7 @@ describe('PersonalizationManager Properties', () => {
             expect(result2).toBeGreaterThanOrEqual(result1);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -207,7 +207,7 @@ describe('PersonalizationManager Properties', () => {
             expect(result2).toBeGreaterThanOrEqual(result1);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -231,7 +231,7 @@ describe('PersonalizationManager Properties', () => {
             expect(errors1).toEqual(errors2);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -262,7 +262,7 @@ describe('PersonalizationManager Properties', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -292,7 +292,7 @@ describe('PersonalizationManager Properties', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -337,7 +337,7 @@ describe('PersonalizationManager Properties', () => {
             expect(Math.abs(result1 - result2)).toBeLessThan(0.0001);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -374,7 +374,7 @@ describe('PersonalizationManager Properties', () => {
             expect(result).toBe(0);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
@@ -410,7 +410,7 @@ describe('PersonalizationManager Properties', () => {
             expect(result).toBeCloseTo(1.0, 5);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });

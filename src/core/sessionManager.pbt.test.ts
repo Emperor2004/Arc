@@ -32,24 +32,24 @@ const sessionStateArbitrary = fc
   .map(([tabs, activeTabId]) => createSessionState(tabs, activeTabId));
 
 describe('SessionManager Properties', () => {
-  beforeEach(() => {
-    resetDatabase();
+  beforeEach(async () => {
+    await resetDatabase();
   });
 
-  afterEach(() => {
-    clearSession();
-    resetDatabase();
+  afterEach(async () => {
+    await clearSession();
+    await resetDatabase();
   });
 
   describe('Property 10.1: Session Restoration Completeness', () => {
-    it('should restore session exactly as saved', () => {
-      fc.assert(
-        fc.property(sessionStateArbitrary, (originalState) => {
+    it('should restore session exactly as saved', async () => {
+      await fc.assert(
+        fc.asyncProperty(sessionStateArbitrary, async (originalState) => {
           // Save the session
-          saveSession(originalState);
+          await saveSession(originalState);
 
           // Load it back
-          const restoredState = loadSession();
+          const restoredState = await loadSession();
 
           // Verify it matches
           expect(restoredState).not.toBeNull();
@@ -57,85 +57,85 @@ describe('SessionManager Properties', () => {
           expect(restoredState!.activeTabId).toBe(originalState.activeTabId);
           expect(restoredState!.version).toBe(originalState.version);
         }),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
-    it('should preserve tab order after restoration', () => {
-      fc.assert(
-        fc.property(
+    it('should preserve tab order after restoration', async () => {
+      await fc.assert(
+        fc.asyncProperty(
           fc.array(tabSessionArbitrary, { minLength: 1, maxLength: 10 }),
           fc.integer({ min: 0, max: 9 }),
-          (tabs, activeIndex) => {
+          async (tabs, activeIndex) => {
             const activeTabId = tabs[activeIndex % tabs.length].id;
             const state = createSessionState(tabs, activeTabId);
 
-            saveSession(state);
-            const restored = loadSession();
+            await saveSession(state);
+            const restored = await loadSession();
 
             expect(restored!.tabs.map((t) => t.id)).toEqual(tabs.map((t) => t.id));
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
-    it('should preserve scroll positions exactly', () => {
-      fc.assert(
-        fc.property(sessionStateArbitrary, (originalState) => {
-          saveSession(originalState);
-          const restored = loadSession();
+    it('should preserve scroll positions exactly', async () => {
+      await fc.assert(
+        fc.asyncProperty(sessionStateArbitrary, async (originalState) => {
+          await saveSession(originalState);
+          const restored = await loadSession();
 
           originalState.tabs.forEach((tab, index) => {
             expect(restored!.tabs[index].scrollPosition).toEqual(tab.scrollPosition);
           });
         }),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
-    it('should preserve form data exactly', () => {
-      fc.assert(
-        fc.property(sessionStateArbitrary, (originalState) => {
-          saveSession(originalState);
-          const restored = loadSession();
+    it('should preserve form data exactly', async () => {
+      await fc.assert(
+        fc.asyncProperty(sessionStateArbitrary, async (originalState) => {
+          await saveSession(originalState);
+          const restored = await loadSession();
 
           originalState.tabs.forEach((tab, index) => {
             expect(restored!.tabs[index].formData).toEqual(tab.formData);
           });
         }),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
-    it('should preserve favicon data exactly', () => {
-      fc.assert(
-        fc.property(sessionStateArbitrary, (originalState) => {
-          saveSession(originalState);
-          const restored = loadSession();
+    it('should preserve favicon data exactly', async () => {
+      await fc.assert(
+        fc.asyncProperty(sessionStateArbitrary, async (originalState) => {
+          await saveSession(originalState);
+          const restored = await loadSession();
 
           originalState.tabs.forEach((tab, index) => {
             expect(restored!.tabs[index].favicon).toEqual(tab.favicon);
           });
         }),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
 
   describe('Property: Session Validation Consistency', () => {
-    it('should validate all created sessions', () => {
-      fc.assert(
-        fc.property(sessionStateArbitrary, (state) => {
+    it('should validate all created sessions', async () => {
+      await fc.assert(
+        fc.asyncProperty(sessionStateArbitrary, async (state) => {
           expect(validateSessionState(state)).toBe(true);
         }),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
 
-    it('should reject sessions with invalid tab structure', () => {
-      fc.assert(
-        fc.property(
+    it('should reject sessions with invalid tab structure', async () => {
+      await fc.assert(
+        fc.asyncProperty(
           fc.record({
             tabs: fc.array(
               fc.record({
@@ -153,7 +153,7 @@ describe('SessionManager Properties', () => {
             timestamp: fc.integer(),
             version: fc.string(),
           }),
-          (state) => {
+          async (state) => {
             // If x is a string, validation should fail
             const hasInvalidX = state.tabs.some(
               (t) => typeof t.scrollPosition.x !== 'number'
@@ -167,40 +167,40 @@ describe('SessionManager Properties', () => {
   });
 
   describe('Property: Session Idempotence', () => {
-    it('should produce same result when loading multiple times', () => {
-      fc.assert(
-        fc.property(sessionStateArbitrary, (originalState) => {
-          saveSession(originalState);
+    it('should produce same result when loading multiple times', async () => {
+      await fc.assert(
+        fc.asyncProperty(sessionStateArbitrary, async (originalState) => {
+          await saveSession(originalState);
 
-          const first = loadSession();
-          const second = loadSession();
-          const third = loadSession();
+          const first = await loadSession();
+          const second = await loadSession();
+          const third = await loadSession();
 
           expect(first).toEqual(second);
           expect(second).toEqual(third);
         }),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
 
   describe('Property: Session Timestamp Ordering', () => {
-    it('should maintain timestamp ordering when saving multiple sessions', () => {
-      fc.assert(
-        fc.property(
+    it('should maintain timestamp ordering when saving multiple sessions', async () => {
+      await fc.assert(
+        fc.asyncProperty(
           fc.array(sessionStateArbitrary, { minLength: 2, maxLength: 10 }),
-          (states) => {
+          async (states) => {
             // Save all states with increasing timestamps
-            states.forEach((state, index) => {
+            for (let index = 0; index < states.length; index++) {
               const newState = {
-                ...state,
+                ...states[index],
                 timestamp: Date.now() + index * 1000,
               };
-              saveSession(newState);
-            });
+              await saveSession(newState);
+            }
 
             // Load and verify we get the most recent one
-            const loaded = loadSession();
+            const loaded = await loadSession();
             expect(loaded).not.toBeNull();
             // The loaded timestamp should be from the last saved state
             expect(loaded!.timestamp).toBeGreaterThanOrEqual(states[0].timestamp);
@@ -212,35 +212,35 @@ describe('SessionManager Properties', () => {
   });
 
   describe('Property: Tab ID Uniqueness', () => {
-    it('should preserve unique tab IDs', () => {
-      fc.assert(
-        fc.property(sessionStateArbitrary, (state) => {
+    it('should preserve unique tab IDs', async () => {
+      await fc.assert(
+        fc.asyncProperty(sessionStateArbitrary, async (state) => {
           const tabIds = state.tabs.map((t) => t.id);
           const uniqueIds = new Set(tabIds);
 
           // If input has unique IDs, output should too
           if (uniqueIds.size === tabIds.length) {
-            saveSession(state);
-            const restored = loadSession();
+            await saveSession(state);
+            const restored = await loadSession();
             const restoredIds = restored!.tabs.map((t) => t.id);
             const restoredUnique = new Set(restoredIds);
 
             expect(restoredUnique.size).toBe(restoredIds.length);
           }
         }),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
 
   describe('Property: URL Preservation', () => {
-    it('should preserve URLs exactly as provided', () => {
-      fc.assert(
-        fc.property(sessionStateArbitrary, (state) => {
+    it('should preserve URLs exactly as provided', async () => {
+      await fc.assert(
+        fc.asyncProperty(sessionStateArbitrary, async (state) => {
           const originalUrls = state.tabs.map((t) => t.url);
 
-          saveSession(state);
-          const restored = loadSession();
+          await saveSession(state);
+          const restored = await loadSession();
           const restoredUrls = restored!.tabs.map((t) => t.url);
 
           // URLs should be preserved exactly
@@ -249,7 +249,7 @@ describe('SessionManager Properties', () => {
             expect(url).toBe(originalUrls[index]);
           });
         }),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });

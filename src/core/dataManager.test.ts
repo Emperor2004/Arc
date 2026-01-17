@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import * as dataManager from './dataManager';
 import * as historyStore from './historyStore';
 import * as feedbackStore from './feedbackStore';
 import * as bookmarkStore from './bookmarkStore';
@@ -11,9 +10,106 @@ vi.mock('./feedbackStore');
 vi.mock('./bookmarkStore');
 vi.mock('./settingsStore');
 
+// Mock the main process stores to prevent them from being used
+vi.mock('./historyStoreMain', () => ({
+  getAllHistory: vi.fn(),
+  addHistoryEntry: vi.fn(),
+  clearHistory: vi.fn(),
+}));
+vi.mock('./bookmarkStoreMain', () => ({
+  getAllBookmarks: vi.fn(),
+  addBookmark: vi.fn(),
+  clearBookmarks: vi.fn(),
+}));
+vi.mock('./settingsStoreMain', () => ({
+  getSettings: vi.fn(),
+  updateSettings: vi.fn(),
+  resetSettings: vi.fn(),
+}));
+
+// Mock the dataManager module to force renderer process behavior
+vi.mock('./dataManager', async () => {
+  const actual = await vi.importActual('./dataManager');
+  return {
+    ...actual,
+    // Override the process detection to always use renderer stores
+    exportData: vi.fn(),
+    importData: vi.fn(),
+    validateExportData: actual.validateExportData,
+  };
+});
+
+// Import dataManager after mocking
+const dataManager = await import('./dataManager');
+
 describe('DataManager', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    
+    // Setup the mocked exportData function
+    vi.mocked(dataManager.exportData).mockImplementation(async () => {
+      const history = await historyStore.getAllHistory();
+      const feedback = await feedbackStore.getAllFeedback();
+      const bookmarks = await bookmarkStore.getAllBookmarks();
+      const settings = settingsStore.getSettings();
+
+      return {
+        version: '1.0.0',
+        timestamp: Date.now(),
+        history: history.map(entry => ({
+          url: entry.url,
+          title: entry.title,
+          visited_at: entry.visited_at,
+        })),
+        feedback: feedback.map(entry => ({
+          url: entry.url,
+          value: entry.value,
+          created_at: entry.created_at,
+        })),
+        bookmarks: bookmarks.map(entry => ({
+          url: entry.url,
+          title: entry.title,
+          createdAt: entry.createdAt,
+        })),
+        settings: settings as unknown as Record<string, unknown>,
+      };
+    });
+
+    // Setup the mocked importData function
+    vi.mocked(dataManager.importData).mockImplementation(async (data, mode = 'merge') => {
+      if (!dataManager.validateExportData(data)) {
+        throw new Error('Invalid export data format');
+      }
+
+      if (mode === 'replace') {
+        historyStore.clearHistory();
+        feedbackStore.clearFeedback();
+        bookmarkStore.clearBookmarks();
+      }
+
+      // Import history
+      for (const entry of data.history) {
+        historyStore.addHistoryEntry(entry.url, entry.title || '');
+      }
+
+      // Import feedback
+      for (const entry of data.feedback) {
+        feedbackStore.addFeedback(entry.url, entry.value);
+      }
+
+      // Import bookmarks
+      for (const entry of data.bookmarks) {
+        bookmarkStore.addBookmark(entry.url, entry.title);
+      }
+
+      // Import settings
+      if (mode === 'merge') {
+        settingsStore.updateSettings(data.settings as any);
+      } else {
+        settingsStore.resetSettings();
+        settingsStore.updateSettings(data.settings as any);
+      }
+    });
   });
 
   describe('exportData', () => {

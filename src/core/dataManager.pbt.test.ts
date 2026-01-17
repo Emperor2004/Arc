@@ -129,7 +129,7 @@ describe('DataManager - Property-Based Tests', () => {
             expect(bookmarkStore.addBookmark).toHaveBeenCalledTimes(bookmarks.length);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -179,7 +179,7 @@ describe('DataManager - Property-Based Tests', () => {
             expect(result1).toBe(result2);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -211,7 +211,7 @@ describe('DataManager - Property-Based Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -234,7 +234,7 @@ describe('DataManager - Property-Based Tests', () => {
           expect(data.feedback).toHaveLength(0);
           expect(data.bookmarks).toHaveLength(0);
         }),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });

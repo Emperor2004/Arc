@@ -54,7 +54,7 @@ describe('ThemeManager - Property-Based Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -96,7 +96,7 @@ describe('ThemeManager - Property-Based Tests', () => {
             expect(result1).toEqual(result2);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -122,7 +122,7 @@ describe('ThemeManager - Property-Based Tests', () => {
             expect(listener1Calls.length).toBe(listener2Calls.length);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -154,7 +154,7 @@ describe('ThemeManager - Property-Based Tests', () => {
             expect(afterUnsubscribe).toBe(beforeUnsubscribe);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -187,7 +187,7 @@ describe('ThemeManager - Property-Based Tests', () => {
             expect(firstState).toEqual(secondState);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });

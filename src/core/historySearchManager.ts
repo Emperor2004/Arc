@@ -1,5 +1,19 @@
 import { HistoryEntry } from './types';
+// Use Main version if in main process, otherwise use localStorage version
+import { getAllHistory as getAllHistoryMain } from './historyStoreMain';
 import { getAllHistory } from './historyStore';
+
+// Detect if we're in main process
+function isMainProcess(): boolean {
+  try {
+    return typeof process !== 'undefined' && process.type !== 'renderer';
+  } catch {
+    return false;
+  }
+}
+
+// Use appropriate version based on process
+const getHistory = isMainProcess() ? getAllHistoryMain : getAllHistory;
 
 export interface HistoryFilter {
   query?: string;
@@ -142,7 +156,7 @@ export class HistorySearchManager {
    * Initialize or refresh the search index
    */
   async indexHistory(): Promise<void> {
-    this.cachedHistory = await getAllHistory();
+    this.cachedHistory = await getHistory();
     this.searchIndex.buildIndex(this.cachedHistory);
     this.lastIndexTime = Date.now();
   }

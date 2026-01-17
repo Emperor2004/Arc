@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { LazyHistoryLoader } from '../../core/performance/LazyHistoryLoader';
-import { HistoryEntry } from '../../types/history';
+import { HistoryEntry } from '../../core/types';
 
 // Mock history store
 class MockHistoryStore {

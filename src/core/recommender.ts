@@ -1,7 +1,21 @@
 import { HistoryEntry, Recommendation, RecommendationKind, RecommendationFeedback } from './types';
+// Use Main version if in main process, otherwise use localStorage version
+import { getRecentHistory as getRecentHistoryMain } from './historyStoreMain';
 import { getRecentHistory } from './historyStore';
 import { getAllFeedback } from './feedbackStore';
 import { getPersonalizationSettings, applyPersonalization, meetsMinimumScore } from './personalizationManager';
+
+// Detect if we're in main process
+function isMainProcess(): boolean {
+  try {
+    return typeof process !== 'undefined' && process.type !== 'renderer';
+  } catch {
+    return false;
+  }
+}
+
+// Use appropriate version based on process
+const getHistory = isMainProcess() ? getRecentHistoryMain : getRecentHistory;
 
 interface DomainStats {
     domain: string;
@@ -169,11 +183,14 @@ export async function getJarvisRecommendations(limit = 5): Promise<Recommendatio
     if (recommendationCache && 
         (now - recommendationCache.timestamp) < CACHE_DURATION &&
         recommendationCache.settingsHash === settingsHash) {
+        console.log('💡 [Recommender] Using cached recommendations:', recommendationCache.recommendations.length);
         return recommendationCache.recommendations.slice(0, effectiveLimit);
     }
 
-    const history = await getRecentHistory(200);
+    const history = await getHistory(200);
     const feedback = await getAllFeedback();
+    console.log(`💡 [Recommender] Loaded ${history.length} history entries and ${feedback.length} feedback entries`);
+    
     const feedbackMap = buildFeedbackMap(feedback);
     
     const domainMap = new Map<string, DomainStats>();
@@ -202,7 +219,11 @@ export async function getJarvisRecommendations(limit = 5): Promise<Recommendatio
     }
 
     const allStats = Array.from(domainMap.values());
-    if (allStats.length === 0) return [];
+    console.log(`💡 [Recommender] Aggregated ${allStats.length} unique domains from history`);
+    if (allStats.length === 0) {
+        console.log('💡 [Recommender] No history found, returning empty recommendations');
+        return [];
+    }
 
     // Calculate max visit count for normalization
     const maxVisits = Math.max(...allStats.map(s => s.visitCount));
@@ -354,6 +375,8 @@ export async function getJarvisRecommendations(limit = 5): Promise<Recommendatio
     const finalRecommendations = candidates
         .sort((a, b) => b.score - a.score)
         .slice(0, effectiveLimit);
+
+    console.log(`💡 [Recommender] Generated ${candidates.length} candidates, returning top ${finalRecommendations.length}`);
 
     // Cache the results
     recommendationCache = {

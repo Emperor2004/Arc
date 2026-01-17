@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook, act, waitFor } from '@testing-library/react';
 import { useTabGroups } from './useTabGroups';
 import { Tab, TabGroup } from '../../core/types';
-import * as tabGroupManager from '../../core/tabGroupManager';
+import * as tabGroupService from '../services/tabGroupService';
 import { resetDatabase } from '../../core/database';
 
 describe('useTabGroups', () => {
@@ -13,13 +13,16 @@ describe('useTabGroups', () => {
     { id: 'tab-4', title: 'Tab 4', url: 'https://example.com/4', isActive: false },
   ];
 
-  beforeEach(() => {
-    resetDatabase();
-    tabGroupManager.clearAllGroups();
+  beforeEach(async () => {
+    // Clear groups BEFORE resetting database to ensure clean state
+    await tabGroupService.clearAllGroups();
+    await resetDatabase();
+    // Add a small delay to ensure all async operations complete
+    await new Promise(resolve => setTimeout(resolve, 50));
   });
 
-  afterEach(() => {
-    tabGroupManager.clearAllGroups();
+  afterEach(async () => {
+    await tabGroupService.clearAllGroups();
   });
 
   it('should initialize with empty groups', () => {
@@ -31,10 +34,22 @@ describe('useTabGroups', () => {
   });
 
   it('should create a new group', () => {
-    const { result } = renderHook(() => useTabGroups(mockTabs));
+    // Ensure clean state at start of test
+    tabGroupService.clearAllGroups();
+    
+    // Debug: Check if service is actually clean
+    const initialGroups = tabGroupService.getAllGroups();
+    
+    // Force re-render with clean state
+    const { result, rerender } = renderHook(() => useTabGroups(mockTabs));
+    
+    // Debug: Check hook state
+    
+    // Verify clean initial state
+    expect(result.current.groups).toHaveLength(0);
 
     act(() => {
-      result.current.createGroup('Work', 'blue');
+      const newGroup = result.current.createGroup('Work', 'blue');
     });
 
     expect(result.current.groups).toHaveLength(1);
@@ -42,8 +57,8 @@ describe('useTabGroups', () => {
     expect(result.current.groups[0].color).toBe('blue');
   });
 
-  it('should add tab to group', () => {
-    const { result } = renderHook(() => useTabGroups(mockTabs));
+  it('should add tab to group', async () => {
+    const { result, rerender } = renderHook(() => useTabGroups(mockTabs));
 
     let groupId: string;
     act(() => {
@@ -55,13 +70,16 @@ describe('useTabGroups', () => {
       result.current.addTabToGroup('tab-1', groupId!);
     });
 
+    // Force a re-render to ensure state updates are applied
+    rerender();
+
     const groupTabs = result.current.groupedTabs.get(groupId!);
     expect(groupTabs).toHaveLength(1);
     expect(groupTabs?.[0].id).toBe('tab-1');
   });
 
   it('should remove tab from group', () => {
-    const { result } = renderHook(() => useTabGroups(mockTabs));
+    const { result, rerender } = renderHook(() => useTabGroups(mockTabs));
 
     let groupId: string;
     act(() => {
@@ -71,9 +89,15 @@ describe('useTabGroups', () => {
       result.current.addTabToGroup('tab-2', groupId);
     });
 
+    // Force re-render after adding tabs
+    rerender();
+
     act(() => {
       result.current.removeTabFromGroup('tab-1', groupId!);
     });
+
+    // Force re-render after removing tab
+    rerender();
 
     const groupTabs = result.current.groupedTabs.get(groupId!);
     expect(groupTabs).toHaveLength(1);
@@ -105,7 +129,13 @@ describe('useTabGroups', () => {
   });
 
   it('should delete a group', () => {
+    // Ensure clean state at start of test
+    tabGroupService.clearAllGroups();
+    
     const { result } = renderHook(() => useTabGroups(mockTabs));
+    
+    // Verify clean initial state
+    expect(result.current.groups).toHaveLength(0);
 
     let groupId: string;
     act(() => {
@@ -165,7 +195,14 @@ describe('useTabGroups', () => {
   });
 
   it('should separate grouped and ungrouped tabs', () => {
-    const { result } = renderHook(() => useTabGroups(mockTabs));
+    // Ensure clean state at start of test
+    tabGroupService.clearAllGroups();
+    
+    const { result, rerender } = renderHook(() => useTabGroups(mockTabs));
+    
+    // Verify clean initial state
+    expect(result.current.groups).toHaveLength(0);
+    expect(result.current.ungroupedTabs).toHaveLength(4);
 
     act(() => {
       const group = result.current.createGroup('Work', 'blue');
@@ -173,12 +210,21 @@ describe('useTabGroups', () => {
       result.current.addTabToGroup('tab-2', group.id);
     });
 
+    // Force re-render after adding tabs to group
+    rerender();
+
     expect(result.current.ungroupedTabs).toHaveLength(2);
     expect(result.current.ungroupedTabs.map((t) => t.id)).toEqual(['tab-3', 'tab-4']);
   });
 
   it('should handle multiple groups', () => {
-    const { result } = renderHook(() => useTabGroups(mockTabs));
+    // Ensure clean state at start of test
+    tabGroupService.clearAllGroups();
+    
+    const { result, rerender } = renderHook(() => useTabGroups(mockTabs));
+    
+    // Verify clean initial state
+    expect(result.current.groups).toHaveLength(0);
 
     let workGroupId: string;
     let personalGroupId: string;
@@ -194,6 +240,9 @@ describe('useTabGroups', () => {
       result.current.addTabToGroup('tab-3', personalGroupId);
     });
 
+    // Force re-render after all operations
+    rerender();
+
     expect(result.current.groups).toHaveLength(2);
     expect(result.current.groupedTabs.get(workGroupId!)).toHaveLength(2);
     expect(result.current.groupedTabs.get(personalGroupId!)).toHaveLength(1);
@@ -201,7 +250,13 @@ describe('useTabGroups', () => {
   });
 
   it('should move tab between groups', () => {
-    const { result } = renderHook(() => useTabGroups(mockTabs));
+    // Ensure clean state at start of test
+    tabGroupService.clearAllGroups();
+    
+    const { result, rerender } = renderHook(() => useTabGroups(mockTabs));
+    
+    // Verify clean initial state
+    expect(result.current.groups).toHaveLength(0);
 
     let workGroupId: string;
     let personalGroupId: string;
@@ -215,11 +270,17 @@ describe('useTabGroups', () => {
       result.current.addTabToGroup('tab-1', workGroupId);
     });
 
+    // Force re-render after adding tab to first group
+    rerender();
+
     expect(result.current.groupedTabs.get(workGroupId!)).toHaveLength(1);
 
     act(() => {
       result.current.addTabToGroup('tab-1', personalGroupId!);
     });
+
+    // Force re-render after moving tab to second group
+    rerender();
 
     // After moving, the tab should be in the new group and removed from the old one
     const workGroupTabs = result.current.groupedTabs.get(workGroupId!);
@@ -246,6 +307,8 @@ describe('useTabGroups', () => {
 
     const { result: result2 } = renderHook(() => useTabGroups(updatedTabs));
 
+    // Groups should be loaded immediately since getAllGroups() is synchronous
+    expect(result2.current.groups.length).toBeGreaterThan(0);
     expect(result2.current.groupedTabs.get(groupId!)?.[0].title).toBe('Updated Tab 1');
   });
 
@@ -263,8 +326,13 @@ describe('useTabGroups', () => {
     });
 
     const newTabs = [...mockTabs, { id: 'tab-5', title: 'Tab 5', url: 'https://example.com/5', isActive: false }];
-    rerender({ tabs: newTabs });
+    
+    act(() => {
+      rerender({ tabs: newTabs });
+    });
 
+    // State should update immediately after rerender
+    expect(result.current.groupedTabs.get(groupId!)).toBeDefined();
     expect(result.current.groupedTabs.get(groupId!)).toHaveLength(1);
     expect(result.current.ungroupedTabs).toHaveLength(4);
   });

@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { Tab, TabGroup } from '../../core/types';
-import * as tabGroupManager from '../../core/tabGroupManager';
+import * as tabGroupService from '../services/tabGroupService';
 
 export interface UseTabGroupsResult {
   groups: TabGroup[];
@@ -16,15 +16,10 @@ export interface UseTabGroupsResult {
 }
 
 export function useTabGroups(tabs: Tab[]): UseTabGroupsResult {
-  const [groups, setGroups] = useState<TabGroup[]>([]);
+  // Initialize with groups immediately (synchronous) to avoid useEffect delay
+  const [groups, setGroups] = useState<TabGroup[]>(() => tabGroupService.getAllGroups());
 
-  // Load groups on mount
-  useEffect(() => {
-    const loadedGroups = tabGroupManager.getAllGroups();
-    setGroups(loadedGroups);
-  }, []);
-
-  // Create a map of grouped tabs
+  // Create a map of grouped tabs - computed directly in render
   const groupedTabs = new Map<string, Tab[]>();
   const ungroupedTabs: Tab[] = [];
 
@@ -41,56 +36,51 @@ export function useTabGroups(tabs: Tab[]): UseTabGroupsResult {
   });
 
   const toggleGroupCollapse = useCallback((groupId: string) => {
-    tabGroupManager.toggleGroupCollapse(groupId);
-    const updated = tabGroupManager.getGroup(groupId);
-    if (updated) {
-      setGroups((prev) =>
-        prev.map((g) => (g.id === groupId ? updated : g))
-      );
-    }
+    tabGroupService.toggleGroupCollapse(groupId);
+    // Refresh entire state from service to ensure consistency
+    const updatedGroups = tabGroupService.getAllGroups();
+    setGroups(updatedGroups);
   }, []);
 
   const createNewGroup = useCallback((name: string, color: TabGroup['color']) => {
-    const newGroup = tabGroupManager.createGroup(name, color);
-    setGroups((prev) => [newGroup, ...prev]);
+    const newGroup = tabGroupService.createGroup(name, color);
+    // Refresh entire state from service to ensure consistency
+    const updatedGroups = tabGroupService.getAllGroups();
+    setGroups(updatedGroups);
     return newGroup;
   }, []);
 
   const deleteGroupHandler = useCallback((groupId: string) => {
-    tabGroupManager.deleteGroup(groupId);
-    setGroups((prev) => prev.filter((g) => g.id !== groupId));
+    tabGroupService.deleteGroup(groupId);
+    // Refresh entire state from service to ensure consistency
+    const updatedGroups = tabGroupService.getAllGroups();
+    setGroups(updatedGroups);
   }, []);
 
   const addTabToGroupHandler = useCallback((tabId: string, groupId: string) => {
-    tabGroupManager.addTabToGroup(tabId, groupId);
+    tabGroupService.addTabToGroup(tabId, groupId);
     
     // Update all groups since the tab might have been moved from another group
-    const updatedGroups = tabGroupManager.getAllGroups();
+    const updatedGroups = tabGroupService.getAllGroups();
     setGroups(updatedGroups);
   }, []);
 
   const removeTabFromGroupHandler = useCallback((tabId: string, groupId: string) => {
-    tabGroupManager.removeTabFromGroup(tabId, groupId);
-    const updated = tabGroupManager.getGroup(groupId);
-    if (updated) {
-      setGroups((prev) =>
-        prev.map((g) => (g.id === groupId ? updated : g))
-      );
-    }
+    tabGroupService.removeTabFromGroup(tabId, groupId);
+    // Refresh entire state from service to ensure consistency
+    const updatedGroups = tabGroupService.getAllGroups();
+    setGroups(updatedGroups);
   }, []);
 
   const updateGroupHandler = useCallback((groupId: string, updates: Partial<TabGroup>) => {
-    tabGroupManager.updateGroup(groupId, updates);
-    const updated = tabGroupManager.getGroup(groupId);
-    if (updated) {
-      setGroups((prev) =>
-        prev.map((g) => (g.id === groupId ? updated : g))
-      );
-    }
+    tabGroupService.updateGroup(groupId, updates);
+    // Refresh entire state from service to ensure consistency
+    const updatedGroups = tabGroupService.getAllGroups();
+    setGroups(updatedGroups);
   }, []);
 
   const getGroupForTabHandler = useCallback((tabId: string) => {
-    return tabGroupManager.getGroupForTab(tabId);
+    return tabGroupService.getGroupForTab(tabId);
   }, []);
 
   return {

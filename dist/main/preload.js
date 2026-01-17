@@ -9,11 +9,21 @@ electron_1.contextBridge.exposeInMainWorld('arc', {
     pageLoaded: (data) => electron_1.ipcRenderer.send('arc:pageLoaded', data),
     getJarvisRecommendations: (limit) => electron_1.ipcRenderer.invoke('jarvis:getRecommendations', limit),
     clearJarvisCache: () => electron_1.ipcRenderer.invoke('jarvis:clearCache'),
+    jarvisChat: (messages) => electron_1.ipcRenderer.invoke('jarvis:chat', messages),
     getRecentHistory: (limit) => electron_1.ipcRenderer.invoke('arc:getRecentHistory', limit),
     sendJarvisFeedback: (feedback) => electron_1.ipcRenderer.invoke('jarvis:sendFeedback', feedback),
     // Settings methods
     getSettings: () => electron_1.ipcRenderer.invoke('arc:getSettings'),
     updateSettings: (partial) => electron_1.ipcRenderer.invoke('arc:updateSettings', partial),
+    onSettingsUpdated: (callback) => {
+        const handler = (_event, settings) => callback(settings);
+        electron_1.ipcRenderer.on('settings:updated', handler);
+        // Return unsubscribe function
+        return () => {
+            electron_1.ipcRenderer.removeListener('settings:updated', handler);
+        };
+    },
+    getOllamaModels: () => electron_1.ipcRenderer.invoke('arc:getOllamaModels'),
     clearHistory: () => electron_1.ipcRenderer.invoke('arc:clearHistory'),
     clearFeedback: () => electron_1.ipcRenderer.invoke('arc:clearFeedback'),
     // Bookmark methods
@@ -30,6 +40,10 @@ electron_1.contextBridge.exposeInMainWorld('arc', {
     saveSession: (tabs, activeTabId) => electron_1.ipcRenderer.invoke('arc:saveSession', tabs, activeTabId),
     clearSession: () => electron_1.ipcRenderer.invoke('arc:clearSession'),
     restoreSession: (tabs) => electron_1.ipcRenderer.invoke('arc:restoreSession', tabs),
+    // Cookie management methods
+    getCookies: (filter) => electron_1.ipcRenderer.invoke('arc:getCookies', filter),
+    clearCookies: () => electron_1.ipcRenderer.invoke('arc:clearCookies'),
+    clearCookiesForUrl: (url) => electron_1.ipcRenderer.invoke('arc:clearCookiesForUrl', url),
     // Keyboard shortcut methods
     newTab: () => electron_1.ipcRenderer.send('arc:newTab'),
     newIncognitoTab: () => electron_1.ipcRenderer.send('arc:newIncognitoTab'),

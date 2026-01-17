@@ -1,42 +1,35 @@
 import { Bookmark } from './types';
-import * as fs from 'fs';
-import * as path from 'path';
 
-const BOOKMARKS_FILE = path.join(process.env.APPDATA || process.env.HOME || '.', 'arc-browser', 'data', 'bookmarks.json');
-
-// Ensure directory exists
-function ensureDir() {
-  const dir = path.dirname(BOOKMARKS_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
+// Browser-safe bookmark storage using localStorage
+const BOOKMARKS_KEY = 'arc-browser-bookmarks';
 
 /**
- * Load bookmarks from file
+ * Load bookmarks from localStorage
  */
 function loadBookmarks(): Bookmark[] {
   try {
-    ensureDir();
-    if (fs.existsSync(BOOKMARKS_FILE)) {
-      const data = fs.readFileSync(BOOKMARKS_FILE, 'utf-8');
-      return JSON.parse(data);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const stored = localStorage.getItem(BOOKMARKS_KEY);
+      if (stored) {
+        return JSON.parse(stored);
+      }
     }
   } catch (error) {
-    console.error('Error loading bookmarks:', error);
+    console.error('Error loading bookmarks from localStorage:', error);
   }
   return [];
 }
 
 /**
- * Save bookmarks to file
+ * Save bookmarks to localStorage
  */
 function saveBookmarks(bookmarks: Bookmark[]): void {
   try {
-    ensureDir();
-    fs.writeFileSync(BOOKMARKS_FILE, JSON.stringify(bookmarks, null, 2), 'utf-8');
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(bookmarks));
+    }
   } catch (error) {
-    console.error('Error saving bookmarks:', error);
+    console.error('Error saving bookmarks to localStorage:', error);
   }
 }
 

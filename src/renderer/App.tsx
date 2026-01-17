@@ -4,37 +4,122 @@ import JarvisPanel, { JarvisPanelHandle } from './components/JarvisPanel';
 import SettingsView from './components/SettingsView';
 import DebugOverlay from './components/DebugOverlay';
 import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp';
+import HamburgerMenu from './components/HamburgerMenu';
 import SessionRestoreDialog from './components/SessionRestoreDialog';
 import { DebugProvider, useDebug } from './contexts/DebugContext';
+import { SettingsProvider } from './contexts/SettingsContext';
 import { KeyboardShortcutManager, createDefaultShortcuts } from '../core/keyboardShortcutManager';
 import { getThemeManager } from '../core/themeManager';
-import { loadSession, clearSession, SessionState, TabSession } from '../core/sessionManager';
+import { SessionState, TabSession } from '../core/sessionManager';
 
 type LayoutMode = 'normal' | 'browser_max' | 'jarvis_max';
 type AppSection = 'browser' | 'settings';
 
-// Error Boundary
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
+// Error Boundary with improved fallback UI
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null; errorInfo: React.ErrorInfo | null }
+> {
   constructor(props: { children: React.ReactNode }) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, errorInfo: null };
   }
 
   static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
+    return { hasError: true, error, errorInfo: null };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('App Error:', error, errorInfo);
+    this.setState({ errorInfo });
   }
 
   render() {
     if (this.state.hasError) {
+      const isMissingAPI = this.state.error?.message?.includes('window.arc') || 
+                          this.state.error?.message?.includes('Cannot read property');
+      
       return (
-        <div style={{ padding: '20px', color: 'red', fontFamily: 'monospace' }}>
-          <h1>Application Error</h1>
-          <p>{this.state.error?.message}</p>
-          <pre>{this.state.error?.stack}</pre>
+        <div style={{
+          padding: '40px',
+          color: '#e5e7eb',
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          background: '#0f1115',
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <div style={{ maxWidth: '600px', textAlign: 'center' }}>
+            <h1 style={{ color: '#f59e0b', fontSize: '24px', marginBottom: '16px' }}>
+              {isMissingAPI ? '⚠️ API Not Available' : '❌ Application Error'}
+            </h1>
+            <p style={{ color: '#9ca3af', marginBottom: '24px', lineHeight: '1.6' }}>
+              {isMissingAPI 
+                ? 'The browser API is not available. This may happen during testing or if Electron failed to initialize properly.'
+                : 'An unexpected error occurred. Please try refreshing the application.'}
+            </p>
+            {process.env.NODE_ENV === 'development' && (
+              <details style={{ 
+                marginTop: '24px', 
+                padding: '16px', 
+                background: '#1f2937', 
+                borderRadius: '8px',
+                textAlign: 'left'
+              }}>
+                <summary style={{ cursor: 'pointer', color: '#60a5fa', marginBottom: '12px' }}>
+                  Error Details (Development Mode)
+                </summary>
+                <p style={{ color: '#ef4444', marginBottom: '8px', wordBreak: 'break-word' }}>
+                  {this.state.error?.message}
+                </p>
+                {this.state.error?.stack && (
+                  <pre style={{ 
+                    color: '#9ca3af', 
+                    fontSize: '12px', 
+                    overflow: 'auto',
+                    maxHeight: '300px',
+                    padding: '12px',
+                    background: '#111827',
+                    borderRadius: '4px'
+                  }}>
+                    {this.state.error.stack}
+                  </pre>
+                )}
+                {this.state.errorInfo && (
+                  <pre style={{ 
+                    color: '#9ca3af', 
+                    fontSize: '12px', 
+                    marginTop: '12px',
+                    overflow: 'auto',
+                    maxHeight: '200px',
+                    padding: '12px',
+                    background: '#111827',
+                    borderRadius: '4px'
+                  }}>
+                    {this.state.errorInfo.componentStack}
+                  </pre>
+                )}
+              </details>
+            )}
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                marginTop: '24px',
+                padding: '12px 24px',
+                background: '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500'
+              }}
+            >
+              Reload Application
+            </button>
+          </div>
         </div>
       );
     }
@@ -64,25 +149,36 @@ const AppContent: React.FC = () => {
     return () => {
       // Cleanup is handled by singleton pattern
     };
-  }, [logAction]);
+  }, []);
 
   // Load and check for session restoration on mount
   useEffect(() => {
     const checkSessionRestore = async () => {
       try {
+        // Check if window.arc is available
+        if (!window.arc || !window.arc.getSettings) {
+          console.warn('window.arc.getSettings not available, skipping session restore');
+          return;
+        }
+
         // Check if session restore is enabled in settings
-        if (window.arc && window.arc.getSettings) {
-          const settings = await window.arc.getSettings();
-          const restoreEnabled = settings.restorePreviousSession !== false;
-          
-          if (restoreEnabled) {
-            // Load the previous session
-            const session = loadSession();
-            if (session && session.tabs.length > 0) {
-              setSessionToRestore(session);
-              setRestoreSessionChoice('pending');
-              logAction('Session restore dialog shown');
+        const settings = await window.arc.getSettings();
+        const restoreEnabled = settings?.restorePreviousSession !== false;
+        
+        if (restoreEnabled) {
+          // Load the previous session via IPC
+          try {
+            if (window.arc && window.arc.loadSession) {
+              const result = await window.arc.loadSession();
+              if (result && result.ok && result.session && result.session.tabs.length > 0) {
+                setSessionToRestore(result.session);
+                setRestoreSessionChoice('pending');
+                logAction('Session restore dialog shown');
+              }
             }
+          } catch (sessionError) {
+            console.error('Error loading session:', sessionError);
+            // Continue without session restore
           }
         }
       } catch (error) {
@@ -91,7 +187,7 @@ const AppContent: React.FC = () => {
     };
 
     checkSessionRestore();
-  }, [logAction]);
+  }, []);
 
   // Initialize keyboard shortcuts
   useEffect(() => {
@@ -170,7 +266,7 @@ const AppContent: React.FC = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [logAction]);
+  }, []);
 
   // Update debug state when section changes
   useEffect(() => {
@@ -247,13 +343,21 @@ const AppContent: React.FC = () => {
     if (window.arc && window.arc.restoreSession) {
       window.arc.restoreSession(tabs);
       setRestoreSessionChoice('restored');
+      setSessionToRestore(null);  // Clear the session after restoring
       logAction('Session restored');
     }
   };
 
-  const handleStartFresh = () => {
-    clearSession();
+  const handleStartFresh = async () => {
+    try {
+      if (window.arc && window.arc.clearSession) {
+        await window.arc.clearSession();
+      }
+    } catch (error) {
+      console.error('Error clearing session:', error);
+    }
     setRestoreSessionChoice('fresh');
+    setSessionToRestore(null);  // Clear the session after starting fresh
     logAction('Session cleared, starting fresh');
   };
 
@@ -291,86 +395,56 @@ const AppContent: React.FC = () => {
         onClose={handleSessionDialogClose}
       />
 
-      <header className="arc-header" role="banner">
-        <div className="arc-logo">
-          Arc <span className="arc-logo-subtitle">+ Jarvis</span>
-        </div>
-        
-        {/* Section Navigation */}
-        <nav className="arc-nav" id="navigation" role="navigation" aria-label="Main navigation">
-          <button 
-            className={`arc-nav-btn ${section === 'browser' ? 'arc-nav-btn--active' : ''}`}
-            onClick={() => {
-              setSection('browser');
-              logAction('Section switched to browser');
-            }}
-            aria-pressed={section === 'browser'}
-            aria-describedby="browser-nav-desc"
-          >
-            🌐 Browse
-          </button>
-          <div id="browser-nav-desc" className="sr-only">
-            Switch to browser view to browse the web and manage tabs
-          </div>
-          <button 
-            className={`arc-nav-btn ${section === 'settings' ? 'arc-nav-btn--active' : ''}`}
-            onClick={() => {
-              setSection('settings');
-              logAction('Section switched to settings');
-            }}
-            aria-pressed={section === 'settings'}
-            aria-describedby="settings-nav-desc"
-          >
-            ⚙️ Settings
-          </button>
-          <div id="settings-nav-desc" className="sr-only">
-            Switch to settings view to configure Arc Browser preferences
-          </div>
-        </nav>
+      {/* Global Hamburger Menu */}
+      <HamburgerMenu
+        currentSection={section}
+        onSectionChange={(newSection) => {
+          setSection(newSection);
+          logAction(`Section switched to ${newSection}`);
+        }}
+      />
 
-        {/* Keyboard Shortcuts Help */}
-        <div className="arc-header-actions">
-          {shortcutManagerRef.current && (
-            <KeyboardShortcutsHelp
-              shortcuts={shortcutManagerRef.current.getShortcuts()}
-              platform={process.platform}
-              onClose={() => setShowShortcutsHelp(false)}
+      <main 
+        className={`arc-main ${section === 'browser' ? `arc-main--${layoutMode}` : ''}`} 
+        style={{ display: section === 'browser' ? 'flex' : 'none' }}
+        id="main-content" 
+        role="main" 
+        aria-label="Browser interface"
+        aria-hidden={section !== 'browser'}
+      >
+        {layoutMode !== 'jarvis_max' && (
+          <section className="arc-main-left" id="browser-section" aria-label="Web browser">
+            <BrowserShell 
+              onNavigationComplete={handleNavigationComplete}
+              onMaximize={handleBrowserMaximize}
+              isMaximized={layoutMode === 'browser_max'}
             />
-          )}
-        </div>
-      </header>
+          </section>
+        )}
 
-      {section === 'browser' && (
-        <main className={`arc-main arc-main--${layoutMode}`} id="main-content" role="main" aria-label="Browser interface">
-          {layoutMode !== 'jarvis_max' && (
-            <section className="arc-main-left" id="browser-section" aria-label="Web browser">
-              <BrowserShell 
-                onNavigationComplete={handleNavigationComplete}
-                onMaximize={handleBrowserMaximize}
-                isMaximized={layoutMode === 'browser_max'}
-              />
-            </section>
-          )}
+        {layoutMode !== 'browser_max' && (
+          <aside className="arc-main-right" id="jarvis-section" role="complementary" aria-label="Jarvis AI assistant">
+            <JarvisPanel 
+              ref={jarvisRef} 
+              refreshTrigger={lastNavigated}
+              onMaximize={handleJarvisMaximize}
+              isMaximized={layoutMode === 'jarvis_max'}
+              onNavigate={handleJarvisNavigate}
+            />
+          </aside>
+        )}
+      </main>
 
-          {layoutMode !== 'browser_max' && (
-            <aside className="arc-main-right" id="jarvis-section" role="complementary" aria-label="Jarvis AI assistant">
-              <JarvisPanel 
-                ref={jarvisRef} 
-                refreshTrigger={lastNavigated}
-                onMaximize={handleJarvisMaximize}
-                isMaximized={layoutMode === 'jarvis_max'}
-                onNavigate={handleJarvisNavigate}
-              />
-            </aside>
-          )}
-        </main>
-      )}
-
-      {section === 'settings' && (
-        <main className="arc-main arc-main--settings" id="main-content" role="main" aria-label="Settings">
-          <SettingsView />
-        </main>
-      )}
+      <main 
+        className="arc-main arc-main--settings" 
+        style={{ display: section === 'settings' ? 'flex' : 'none' }}
+        id="settings-content" 
+        role="main" 
+        aria-label="Settings"
+        aria-hidden={section !== 'settings'}
+      >
+        <SettingsView />
+      </main>
     </div>
   );
 }
@@ -379,8 +453,10 @@ const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <DebugProvider>
-        <AppContent />
-        <DebugOverlay />
+        <SettingsProvider>
+          <AppContent />
+          <DebugOverlay />
+        </SettingsProvider>
       </DebugProvider>
     </ErrorBoundary>
   );

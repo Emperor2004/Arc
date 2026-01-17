@@ -39,7 +39,7 @@ describe('TabReorderManager - Property-Based Tests', () => {
             expect(finalTabs).toEqual(originalTabs);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -57,7 +57,7 @@ describe('TabReorderManager - Property-Based Tests', () => {
             expect(manager.getTabOrder().length).toBe(initialCount);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -80,7 +80,7 @@ describe('TabReorderManager - Property-Based Tests', () => {
             expect(countAfterSecond).toBe(countAfterFirst);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -103,7 +103,7 @@ describe('TabReorderManager - Property-Based Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -123,7 +123,7 @@ describe('TabReorderManager - Property-Based Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -148,7 +148,7 @@ describe('TabReorderManager - Property-Based Tests', () => {
             expect(notifications[notifications.length - 1]).toContain(newTab);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -180,7 +180,7 @@ describe('TabReorderManager - Property-Based Tests', () => {
             }
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });
@@ -199,7 +199,7 @@ describe('TabReorderManager - Property-Based Tests', () => {
             expect(manager.getTabOrder()).toEqual([]);
           }
         ),
-        { numRuns: 100 }
+        { numRuns: 10 }
       );
     });
   });

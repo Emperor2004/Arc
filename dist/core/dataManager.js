@@ -36,18 +36,37 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.exportData = exportData;
 exports.validateExportData = validateExportData;
 exports.importData = importData;
+// Use Main versions if in main process, otherwise use localStorage versions
+const historyStoreMain = __importStar(require("./historyStoreMain"));
 const historyStore = __importStar(require("./historyStore"));
 const feedbackStore = __importStar(require("./feedbackStore"));
+const bookmarkStoreMain = __importStar(require("./bookmarkStoreMain"));
 const bookmarkStore = __importStar(require("./bookmarkStore"));
+const settingsStoreMain = __importStar(require("./settingsStoreMain"));
 const settingsStore = __importStar(require("./settingsStore"));
+// Detect if we're in main process
+function isMainProcess() {
+    try {
+        return typeof process !== 'undefined' && process.type !== 'renderer';
+    }
+    catch {
+        return false;
+    }
+}
+// Use appropriate versions based on process
+const historyStoreImpl = isMainProcess() ? historyStoreMain : historyStore;
+const bookmarkStoreImpl = isMainProcess() ? bookmarkStoreMain : bookmarkStore;
+const settingsStoreImpl = isMainProcess() ? settingsStoreMain : settingsStore;
 /**
  * Export all data to a JSON object
  */
 async function exportData() {
-    const history = await historyStore.getAllHistory();
+    const history = await historyStoreImpl.getAllHistory();
     const feedback = await feedbackStore.getAllFeedback();
-    const bookmarks = await bookmarkStore.getAllBookmarks();
-    const settings = settingsStore.getSettings();
+    const bookmarks = await bookmarkStoreImpl.getAllBookmarks();
+    const settings = isMainProcess()
+        ? await settingsStoreImpl.getSettings()
+        : settingsStoreImpl.getSettings();
     return {
         version: '1.0.0',
         timestamp: Date.now(),
@@ -138,13 +157,13 @@ async function importData(data, mode = 'merge') {
     }
     if (mode === 'replace') {
         // Clear existing data
-        historyStore.clearHistory();
-        feedbackStore.clearFeedback();
-        bookmarkStore.clearBookmarks();
+        await historyStoreImpl.clearHistory();
+        await feedbackStore.clearFeedback();
+        await bookmarkStoreImpl.clearBookmarks();
     }
     // Import history
     for (const entry of data.history) {
-        historyStore.addHistoryEntry(entry.url, entry.title || '');
+        await historyStoreImpl.addHistoryEntry(entry.url, entry.title || '');
     }
     // Import feedback
     for (const entry of data.feedback) {
@@ -152,17 +171,29 @@ async function importData(data, mode = 'merge') {
     }
     // Import bookmarks
     for (const entry of data.bookmarks) {
-        bookmarkStore.addBookmark(entry.url, entry.title);
+        await bookmarkStoreImpl.addBookmark(entry.url, entry.title);
     }
     // Import settings (merge mode only for settings)
     if (mode === 'merge') {
         const updates = data.settings;
-        settingsStore.updateSettings(updates);
+        if (isMainProcess()) {
+            await settingsStoreImpl.updateSettings(updates);
+        }
+        else {
+            settingsStoreImpl.updateSettings(updates);
+        }
     }
     else {
         // Replace mode: reset and set all settings
-        settingsStore.resetSettings();
-        const updates = data.settings;
-        settingsStore.updateSettings(updates);
+        if (isMainProcess()) {
+            await settingsStoreImpl.resetSettings();
+            const updates = data.settings;
+            await settingsStoreImpl.updateSettings(updates);
+        }
+        else {
+            settingsStoreImpl.resetSettings();
+            const updates = data.settings;
+            settingsStoreImpl.updateSettings(updates);
+        }
     }
 }

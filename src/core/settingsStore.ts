@@ -1,8 +1,7 @@
 import { ArcSettings } from './types';
-import * as fs from 'fs';
-import * as path from 'path';
 
-const SETTINGS_FILE = path.join(process.env.APPDATA || process.env.HOME || '.', 'arc-browser', 'data', 'settings.json');
+// Browser-safe settings storage using localStorage
+const SETTINGS_KEY = 'arc-browser-settings';
 
 const DEFAULT_SETTINGS: ArcSettings = {
   theme: 'system',
@@ -13,6 +12,15 @@ const DEFAULT_SETTINGS: ArcSettings = {
   tabOrder: [],
   keyboardShortcutsEnabled: true,
   restorePreviousSession: true,
+  // Personalization defaults
+  recencyWeight: 0.5,
+  frequencyWeight: 0.3,
+  feedbackWeight: 0.2,
+  minScore: 0.1,
+  maxRecommendations: 5,
+  ollamaModel: 'llama3:latest',
+  ollamaEnabled: true, // Enable Ollama by default
+  ollamaEndpoint: 'http://localhost:11434',
   // Accessibility defaults
   reducedMotion: false,
   highContrast: false,
@@ -21,39 +29,31 @@ const DEFAULT_SETTINGS: ArcSettings = {
   screenReaderOptimizations: false,
 };
 
-// Ensure directory exists
-function ensureDir() {
-  const dir = path.dirname(SETTINGS_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
-
-/**
- * Load settings from file
- */
+// Browser-safe settings management using localStorage
 function loadSettings(): ArcSettings {
   try {
-    ensureDir();
-    if (fs.existsSync(SETTINGS_FILE)) {
-      const data = fs.readFileSync(SETTINGS_FILE, 'utf-8');
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const stored = localStorage.getItem(SETTINGS_KEY);
+      if (stored) {
+        return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+      }
     }
   } catch (error) {
-    console.error('Error loading settings:', error);
+    console.error('Error loading settings from localStorage:', error);
   }
   return DEFAULT_SETTINGS;
 }
 
 /**
- * Save settings to file
+ * Save settings to localStorage
  */
 function saveSettings(settings: ArcSettings): void {
   try {
-    ensureDir();
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf-8');
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    }
   } catch (error) {
-    console.error('Error saving settings:', error);
+    console.error('Error saving settings to localStorage:', error);
   }
 }
 

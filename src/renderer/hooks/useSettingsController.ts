@@ -25,11 +25,10 @@ export const useSettingsController = (): SettingsController => {
             if (typeof window !== 'undefined' && (window as any).arc && (window as any).arc.getSettings) {
                 const loadedSettings = await (window as any).arc.getSettings();
                 setSettings(prev => ({ ...prev, ...loadedSettings }));
-            } else {
-                setLoading(false);
             }
         } catch (error) {
             console.error('Failed to load settings:', error);
+        } finally {
             setLoading(false);
         }
     };

@@ -56,6 +56,7 @@ export interface ArcSettings {
     maxRecommendations?: number;
     ollamaModel?: string;
     ollamaEnabled?: boolean;
+    ollamaEndpoint?: string;
     // Accessibility settings
     reducedMotion?: boolean;
     highContrast?: boolean;
@@ -89,4 +90,20 @@ export interface TabGroup {
     tabIds: string[];
     isCollapsed: boolean;
     createdAt: number;
+}
+export interface RecommendationPersonalization {
+  recencyWeight: number;      // 0.0 to 1.0, default 0.5
+  frequencyWeight: number;    // 0.0 to 1.0, default 0.3
+  feedbackWeight: number;     // 0.0 to 1.0, default 0.2
+  minScore: number;           // 0.0 to 1.0, default 0.1
+  maxRecommendations: number; // 1 to 20, default 5
+  ollamaModel?: string;       // Ollama model name (e.g., 'mistral', 'neural-chat')
+  ollamaEnabled?: boolean;    // Enable Ollama for enhanced recommendations
+}
+
+export interface PersonalizationManager {
+  getSettings(): RecommendationPersonalization;
+  updateSettings(updates: Partial<RecommendationPersonalization>): Promise<void>;
+  applyPersonalization(baseScore: number, weights: RecommendationPersonalization): number;
+  getOllamaModels(): Promise<string[]>;
 }

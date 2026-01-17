@@ -35,47 +35,163 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.setupIpc = void 0;
 const electron_1 = require("electron");
-const historyStore_1 = require("../core/historyStore");
+const historyStoreMain_1 = require("../core/historyStoreMain");
 const feedbackStore_1 = require("../core/feedbackStore");
-const settingsStore_1 = require("../core/settingsStore");
+const settingsStoreMain_1 = require("../core/settingsStoreMain");
 const recommender_1 = require("../core/recommender");
 const dataManager = __importStar(require("../core/dataManager"));
-const bookmarkStore_1 = require("../core/bookmarkStore");
+const bookmarkStoreMain_1 = require("../core/bookmarkStoreMain");
 const sessionManager_1 = require("../core/sessionManager");
+// Cookie Manager Helper Functions
+function getSessionForContext(incognito = false) {
+    if (incognito) {
+        // Return incognito session partition (non-persistent)
+        return electron_1.session.fromPartition('incognito', { cache: false });
+    }
+    // Return default session for normal browsing
+    return electron_1.session.defaultSession;
+}
+function constructCookieUrl(cookie) {
+    const protocol = cookie.secure ? 'https' : 'http';
+    const domain = cookie.domain && cookie.domain.startsWith('.')
+        ? cookie.domain.substring(1)
+        : (cookie.domain || 'localhost');
+    return `${protocol}://${domain}${cookie.path}`;
+}
+async function getCookies(filter, incognito = false) {
+    const targetSession = getSessionForContext(incognito);
+    const cookies = await targetSession.cookies.get(filter || {});
+    return cookies;
+}
+async function clearAllCookies(incognito = false) {
+    try {
+        console.log('🍪 [Cookies] clearAllCookies called, incognito:', incognito);
+        const targetSession = getSessionForContext(incognito);
+        const cookies = await targetSession.cookies.get({});
+        console.log('🍪 [Cookies] Found', cookies.length, 'cookies to clear');
+        let cleared = 0;
+        for (const cookie of cookies) {
+            const url = constructCookieUrl(cookie);
+            console.log('🍪 [Cookies] Removing cookie:', cookie.name, 'from URL:', url);
+            try {
+                await targetSession.cookies.remove(url, cookie.name);
+                cleared++;
+                console.log('🍪 [Cookies] Successfully removed:', cookie.name);
+            }
+            catch (removeError) {
+                console.error('🍪 [Cookies] Failed to remove cookie:', cookie.name, removeError);
+            }
+        }
+        console.log('🍪 [Cookies] Cleared', cleared, 'out of', cookies.length, 'cookies');
+        return { ok: true, cleared };
+    }
+    catch (error) {
+        console.error('🍪 [Cookies] Error in clearAllCookies:', error);
+        return {
+            ok: false,
+            cleared: 0,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
+}
+async function clearCookiesForUrl(url, incognito = false) {
+    try {
+        // Validate URL format before processing
+        if (!url || typeof url !== 'string' || url.trim() === '') {
+            return {
+                ok: false,
+                cleared: 0,
+                error: 'Invalid URL: URL must be a non-empty string'
+            };
+        }
+        // Parse and validate URL structure
+        let parsedUrl;
+        try {
+            parsedUrl = new URL(url);
+        }
+        catch (urlError) {
+            return {
+                ok: false,
+                cleared: 0,
+                error: `Invalid URL format: ${urlError instanceof Error ? urlError.message : 'Malformed URL'}`
+            };
+        }
+        const domain = parsedUrl.hostname;
+        // Validate that we have a valid domain
+        if (!domain) {
+            return {
+                ok: false,
+                cleared: 0,
+                error: 'Invalid URL: No hostname found in URL'
+            };
+        }
+        const targetSession = getSessionForContext(incognito);
+        // Get cookies matching the domain
+        const cookies = await targetSession.cookies.get({ domain });
+        for (const cookie of cookies) {
+            const cookieUrl = constructCookieUrl(cookie);
+            await targetSession.cookies.remove(cookieUrl, cookie.name);
+        }
+        return { ok: true, cleared: cookies.length };
+    }
+    catch (error) {
+        return {
+            ok: false,
+            cleared: 0,
+            error: error instanceof Error ? error.message : 'Cookie operation failed'
+        };
+    }
+}
 const setupIpc = (mainWindow) => {
     electron_1.ipcMain.on('arc:navigate', (event, url) => {
+        console.log(`🔗 [IPC] arc:navigate called with URL: ${url}`);
         let targetUrl = url;
         if (!/^https?:\/\//i.test(url)) {
             targetUrl = `https://${url}`;
+            console.log(`🔗 [IPC] Normalized URL to: ${targetUrl}`);
         }
-        console.log(`Navigating to: ${targetUrl}`);
-        // mainWindow.webContents.loadURL(targetUrl);
+        // Get the sender's webContents (the renderer that sent the message)
+        const senderWebContents = event.sender;
+        // Find the BrowserWindow that contains this webContents
+        const window = electron_1.BrowserWindow.fromWebContents(senderWebContents);
+        if (window) {
+            // Send navigation event to the renderer
+            console.log(`🔗 [IPC] Sending navigate-to event to renderer`);
+            window.webContents.send('navigate-to', targetUrl);
+        }
+        else {
+            console.error('❌ Could not find window for navigation');
+        }
     });
     electron_1.ipcMain.on('arc:pageLoaded', async (event, data) => {
         try {
             // Validate payload
             if (!data || !data.url) {
-                console.warn('arc:pageLoaded received invalid payload');
+                console.warn('⚠️ arc:pageLoaded received invalid payload');
                 return;
             }
-            console.log(`Page loaded: ${JSON.stringify(data)}`);
+            console.log(`📄 [IPC] Page loaded: ${data.url} (${data.title || 'no title'})`);
             // Skip history recording for incognito tabs
             if (data.incognito) {
-                console.log('Skipping history recording for incognito tab');
+                console.log('🔒 Skipping history recording for incognito tab');
                 return;
             }
-            await (0, historyStore_1.addHistoryEntry)(data.url, data.title);
+            await (0, historyStoreMain_1.addHistoryEntry)(data.url, data.title);
+            console.log(`📚 History entry recorded for: ${data.url}`);
         }
         catch (err) {
-            console.error('Error in arc:pageLoaded handler:', err);
+            console.error('❌ Error in arc:pageLoaded handler:', err);
         }
     });
     electron_1.ipcMain.handle('jarvis:getRecommendations', async (_event, limit) => {
         try {
-            return await (0, recommender_1.getJarvisRecommendations)(limit ?? 5);
+            console.log(`💡 [IPC] jarvis:getRecommendations called with limit: ${limit ?? 5}`);
+            const recommendations = await (0, recommender_1.getJarvisRecommendations)(limit ?? 5);
+            console.log(`💡 [IPC] Returning ${recommendations.length} recommendations`);
+            return recommendations;
         }
         catch (err) {
-            console.error('Error in jarvis:getRecommendations handler:', err);
+            console.error('❌ Error in jarvis:getRecommendations handler:', err);
             return [];
         }
     });
@@ -89,9 +205,157 @@ const setupIpc = (mainWindow) => {
             return { ok: false };
         }
     });
+    // Jarvis chat handler
+    electron_1.ipcMain.handle('jarvis:chat', async (_event, messages) => {
+        try {
+            console.log('🔌 [IPC] jarvis:chat received:', messages.length, 'messages');
+            // Get settings to check if Ollama is enabled
+            const settings = await (0, settingsStoreMain_1.getSettings)();
+            if (!settings.ollamaEnabled) {
+                console.log('🔌 [IPC] Ollama disabled, returning fallback indicator');
+                return {
+                    ok: true,
+                    reply: null,
+                    useFallback: true
+                };
+            }
+            // Get Ollama endpoint and model from settings
+            const ollamaEndpoint = settings.ollamaEndpoint || 'http://localhost:11434';
+            const ollamaModel = settings.ollamaModel || 'llama3:latest';
+            console.log('🔌 [IPC] Settings:', { ollamaEnabled: settings.ollamaEnabled, endpoint: ollamaEndpoint, model: ollamaModel });
+            // Get Ollama client
+            const { getOllamaClient } = await Promise.resolve().then(() => __importStar(require('../core/ollamaClient')));
+            const ollamaClient = getOllamaClient(ollamaEndpoint);
+            // Check Ollama status
+            console.log('🔌 [IPC] Checking Ollama status...');
+            const status = await ollamaClient.getStatus();
+            console.log('🔌 [IPC] Status check complete:', {
+                available: status.available,
+                hasModels: status.hasModels,
+                modelCount: status.models.length,
+                modelNames: status.models.map(m => m.name)
+            });
+            if (!status.available) {
+                console.log('🔌 [IPC] Ollama server not available');
+                return {
+                    ok: true,
+                    reply: 'Ollama is not running. Start it with: ollama serve',
+                    useFallback: true
+                };
+            }
+            if (!status.hasModels) {
+                console.log('🔌 [IPC] Ollama has no models installed');
+                return {
+                    ok: true,
+                    reply: 'Ollama has no models installed. Install one with: ollama pull llama3',
+                    useFallback: true
+                };
+            }
+            // Validate model exists and select appropriate model
+            const modelExists = status.models.some(m => m.name === ollamaModel ||
+                m.name.startsWith(ollamaModel.split(':')[0]));
+            let effectiveModel = ollamaModel;
+            if (!modelExists) {
+                console.log('🔌 [IPC] Configured model not found, using first available');
+                effectiveModel = status.models[0].name;
+            }
+            console.log('🔌 [IPC] Using model:', effectiveModel);
+            // Get recent history and recommendations for context
+            const recentHistory = await (0, historyStoreMain_1.getRecentHistory)(5);
+            const recommendations = await (0, recommender_1.getJarvisRecommendations)(3);
+            // Get the last user message
+            const userMessage = messages[messages.length - 1]?.text || '';
+            console.log('🔌 [IPC] Calling Ollama chat:', {
+                model: effectiveModel,
+                messageLength: userMessage.length,
+                historyCount: recentHistory.length,
+                recCount: recommendations.length
+            });
+            // Call Ollama
+            const result = await ollamaClient.chatWithJarvis(userMessage, {
+                recentHistory: recentHistory.map(h => ({
+                    url: h.url,
+                    title: h.title || h.url
+                })),
+                recommendations: recommendations.map(r => ({
+                    url: r.url,
+                    title: r.title || r.url,
+                    reason: r.reason
+                }))
+            }, effectiveModel);
+            console.log('🔌 [IPC] Ollama response received:', {
+                length: result.reply.length,
+                preview: result.reply.substring(0, 100) + (result.reply.length > 100 ? '...' : ''),
+                usedModel: result.usedModel,
+                hasFallbackNotice: !!result.fallbackNotice
+            });
+            // Prepend fallback notice to reply if present
+            let finalReply = result.reply;
+            if (result.fallbackNotice) {
+                finalReply = `ℹ️ ${result.fallbackNotice}\n\n${result.reply}`;
+            }
+            return {
+                ok: true,
+                reply: finalReply,
+                usedModel: result.usedModel,
+                useFallback: false
+            };
+        }
+        catch (err) {
+            console.error('❌ [IPC] Error in jarvis:chat:', {
+                error: err instanceof Error ? err.message : String(err),
+                type: err instanceof Error ? err.name : typeof err,
+                stack: err instanceof Error ? err.stack : undefined
+            });
+            // Check if it's an OllamaError
+            if (err && typeof err === 'object' && 'type' in err) {
+                const ollamaError = err;
+                console.log('🔌 [IPC] Returning OllamaError as fallback:', ollamaError.message);
+                return {
+                    ok: true,
+                    reply: ollamaError.message,
+                    useFallback: true
+                };
+            }
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            console.log('🔌 [IPC] Returning generic error:', errorMessage);
+            return {
+                ok: false,
+                error: errorMessage,
+                useFallback: true
+            };
+        }
+    });
+    // Get Ollama models handler
+    electron_1.ipcMain.handle('arc:getOllamaModels', async () => {
+        try {
+            console.log('🔌 [IPC] arc:getOllamaModels called');
+            // Get settings to check Ollama endpoint
+            const settings = await (0, settingsStoreMain_1.getSettings)();
+            const ollamaEndpoint = settings.ollamaEndpoint || 'http://localhost:11434';
+            // Get Ollama client
+            const { getOllamaClient } = await Promise.resolve().then(() => __importStar(require('../core/ollamaClient')));
+            const ollamaClient = getOllamaClient(ollamaEndpoint);
+            // Get installed models
+            const models = await ollamaClient.getInstalledModels();
+            console.log('🔌 [IPC] Returning', models.length, 'models');
+            return {
+                ok: true,
+                models
+            };
+        }
+        catch (err) {
+            console.error('🔌 [IPC] Error in arc:getOllamaModels:', err);
+            return {
+                ok: false,
+                models: [],
+                error: err instanceof Error ? err.message : String(err)
+            };
+        }
+    });
     electron_1.ipcMain.handle('arc:getRecentHistory', async (_event, limit) => {
         try {
-            return await (0, historyStore_1.getRecentHistory)(limit ?? 50);
+            return await (0, historyStoreMain_1.getRecentHistory)(limit ?? 50);
         }
         catch (err) {
             console.error('Error in arc:getRecentHistory handler:', err);
@@ -111,7 +375,7 @@ const setupIpc = (mainWindow) => {
     // Settings handlers
     electron_1.ipcMain.handle('arc:getSettings', async () => {
         try {
-            return await (0, settingsStore_1.getSettings)();
+            return await (0, settingsStoreMain_1.getSettings)();
         }
         catch (err) {
             console.error('Error in arc:getSettings handler:', err);
@@ -120,7 +384,7 @@ const setupIpc = (mainWindow) => {
     });
     electron_1.ipcMain.handle('arc:updateSettings', async (_event, partial) => {
         try {
-            return await (0, settingsStore_1.updateSettings)(partial);
+            return await (0, settingsStoreMain_1.updateSettings)(partial);
         }
         catch (err) {
             console.error('Error in arc:updateSettings handler:', err);
@@ -129,7 +393,7 @@ const setupIpc = (mainWindow) => {
     });
     electron_1.ipcMain.handle('arc:clearHistory', async () => {
         try {
-            await (0, historyStore_1.clearHistory)();
+            await (0, historyStoreMain_1.clearHistory)();
             return { ok: true };
         }
         catch (err) {
@@ -150,7 +414,7 @@ const setupIpc = (mainWindow) => {
     // Bookmark handlers
     electron_1.ipcMain.handle('arc:addBookmark', async (_event, url, title) => {
         try {
-            await (0, bookmarkStore_1.addBookmark)(url, title);
+            await (0, bookmarkStoreMain_1.addBookmark)(url, title);
             return { ok: true };
         }
         catch (err) {
@@ -160,7 +424,7 @@ const setupIpc = (mainWindow) => {
     });
     electron_1.ipcMain.handle('arc:removeBookmark', async (_event, url) => {
         try {
-            await (0, bookmarkStore_1.removeBookmark)(url);
+            await (0, bookmarkStoreMain_1.removeBookmark)(url);
             return { ok: true };
         }
         catch (err) {
@@ -170,7 +434,7 @@ const setupIpc = (mainWindow) => {
     });
     electron_1.ipcMain.handle('arc:isBookmarked', async (_event, url) => {
         try {
-            const bookmarked = await (0, bookmarkStore_1.isBookmarked)(url);
+            const bookmarked = await (0, bookmarkStoreMain_1.isBookmarked)(url);
             return { ok: true, bookmarked };
         }
         catch (err) {
@@ -180,7 +444,7 @@ const setupIpc = (mainWindow) => {
     });
     electron_1.ipcMain.handle('arc:getAllBookmarks', async () => {
         try {
-            const bookmarks = await (0, bookmarkStore_1.getAllBookmarks)();
+            const bookmarks = await (0, bookmarkStoreMain_1.getAllBookmarks)();
             return { ok: true, bookmarks };
         }
         catch (err) {
@@ -190,7 +454,7 @@ const setupIpc = (mainWindow) => {
     });
     electron_1.ipcMain.handle('arc:searchBookmarks', async (_event, query) => {
         try {
-            const results = await (0, bookmarkStore_1.searchBookmarks)(query);
+            const results = await (0, bookmarkStoreMain_1.searchBookmarks)(query);
             return { ok: true, results };
         }
         catch (err) {
@@ -222,33 +486,33 @@ const setupIpc = (mainWindow) => {
     // Session management handlers
     electron_1.ipcMain.handle('arc:loadSession', async () => {
         try {
-            const session = (0, sessionManager_1.loadSession)();
+            const session = await (0, sessionManager_1.loadSession)();
             return { ok: true, session };
         }
         catch (err) {
             console.error('Error in arc:loadSession handler:', err);
-            return { ok: false, session: null };
+            return { ok: false, session: null, error: err instanceof Error ? err.message : 'Unknown error' };
         }
     });
     electron_1.ipcMain.handle('arc:saveSession', async (_event, tabs, activeTabId) => {
         try {
             const sessionState = (0, sessionManager_1.createSessionState)(tabs, activeTabId);
-            (0, sessionManager_1.saveSession)(sessionState);
+            await (0, sessionManager_1.saveSession)(sessionState);
             return { ok: true };
         }
         catch (err) {
             console.error('Error in arc:saveSession handler:', err);
-            return { ok: false };
+            return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' };
         }
     });
     electron_1.ipcMain.handle('arc:clearSession', async () => {
         try {
-            (0, sessionManager_1.clearSession)();
+            await (0, sessionManager_1.clearSession)();
             return { ok: true };
         }
         catch (err) {
             console.error('Error in arc:clearSession handler:', err);
-            return { ok: false };
+            return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' };
         }
     });
     electron_1.ipcMain.handle('arc:restoreSession', async (_event, tabs) => {
@@ -259,7 +523,52 @@ const setupIpc = (mainWindow) => {
         }
         catch (err) {
             console.error('Error in arc:restoreSession handler:', err);
-            return { ok: false };
+            return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+    // Cookie management handlers
+    electron_1.ipcMain.handle('arc:getCookies', async (_event, filter) => {
+        try {
+            const cookies = await getCookies(filter);
+            return { ok: true, cookies };
+        }
+        catch (err) {
+            console.error('Error in arc:getCookies handler:', err);
+            return {
+                ok: false,
+                cookies: [],
+                error: err instanceof Error ? err.message : 'Unknown error'
+            };
+        }
+    });
+    electron_1.ipcMain.handle('arc:clearCookies', async () => {
+        try {
+            console.log('🔌 [IPC] arc:clearCookies called');
+            const result = await clearAllCookies();
+            console.log('🔌 [IPC] clearCookies result:', result);
+            return result;
+        }
+        catch (err) {
+            console.error('🔌 [IPC] Error in arc:clearCookies handler:', err);
+            return {
+                ok: false,
+                cleared: 0,
+                error: err instanceof Error ? err.message : 'Unknown error'
+            };
+        }
+    });
+    electron_1.ipcMain.handle('arc:clearCookiesForUrl', async (_event, url) => {
+        try {
+            const result = await clearCookiesForUrl(url);
+            return result;
+        }
+        catch (err) {
+            console.error('Error in arc:clearCookiesForUrl handler:', err);
+            return {
+                ok: false,
+                cleared: 0,
+                error: err instanceof Error ? err.message : 'Unknown error'
+            };
         }
     });
 };

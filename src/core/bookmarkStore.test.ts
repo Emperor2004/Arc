@@ -1,6 +1,4 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as fs from 'fs';
-import * as path from 'path';
 import {
   addBookmark,
   removeBookmark,
@@ -16,24 +14,15 @@ import {
   importBookmarks,
 } from './bookmarkStore';
 
-// Mock fs module
-vi.mock('fs');
-vi.mock('path');
-
 describe('BookmarkStore Module', () => {
   beforeEach(() => {
+    // Clear localStorage before each test
+    localStorage.clear();
     vi.clearAllMocks();
-    // Mock path.join to return a consistent path
-    vi.mocked(path.join).mockReturnValue('/mock/bookmarks.json');
-    // Mock fs.existsSync to return true
-    vi.mocked(fs.existsSync).mockReturnValue(true);
   });
 
   describe('addBookmark', () => {
     it('should add a new bookmark', () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('[]');
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
-
       const bookmark = addBookmark('https://github.com', 'GitHub');
 
       expect(bookmark.url).toBe('https://github.com');
@@ -44,62 +33,39 @@ describe('BookmarkStore Module', () => {
     });
 
     it('should add tags to bookmark', () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('[]');
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
-
       const bookmark = addBookmark('https://github.com', 'GitHub', ['dev', 'coding']);
 
       expect(bookmark.tags).toEqual(['dev', 'coding']);
     });
 
-    it('should save bookmark to file', () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('[]');
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
-
+    it('should save bookmark to localStorage', () => {
       addBookmark('https://github.com', 'GitHub');
 
-      expect(vi.mocked(fs.writeFileSync)).toHaveBeenCalled();
-      const writeCall = vi.mocked(fs.writeFileSync).mock.calls[0];
-      const writtenData = JSON.parse(writeCall[1] as string);
-      expect(writtenData.length).toBe(1);
-      expect(writtenData[0].url).toBe('https://github.com');
+      const stored = localStorage.getItem('arc-browser-bookmarks');
+      expect(stored).not.toBeNull();
+      
+      const bookmarks = JSON.parse(stored!);
+      expect(bookmarks.length).toBe(1);
+      expect(bookmarks[0].url).toBe('https://github.com');
     });
   });
 
   describe('removeBookmark', () => {
     it('should remove bookmark by ID', () => {
-      const bookmarks = JSON.stringify([
-        {
-          id: '1',
-          url: 'https://github.com',
-          title: 'GitHub',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-        {
-          id: '2',
-          url: 'https://example.com',
-          title: 'Example',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-      ]);
+      const bookmark1 = addBookmark('https://github.com', 'GitHub');
+      const bookmark2 = addBookmark('https://example.com', 'Example');
 
-      vi.mocked(fs.readFileSync).mockReturnValue(bookmarks);
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
-
-      const removed = removeBookmark('1');
+      const removed = removeBookmark(bookmark1.id);
 
       expect(removed).toBe(true);
-      const writeCall = vi.mocked(fs.writeFileSync).mock.calls[0];
-      const writtenData = JSON.parse(writeCall[1] as string);
-      expect(writtenData.length).toBe(1);
-      expect(writtenData[0].id).toBe('2');
+      
+      const stored = localStorage.getItem('arc-browser-bookmarks');
+      const bookmarks = JSON.parse(stored!);
+      expect(bookmarks.length).toBe(1);
+      expect(bookmarks[0].id).toBe(bookmark2.id);
     });
 
     it('should return false if bookmark not found', () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('[]');
-
       const removed = removeBookmark('nonexistent');
 
       expect(removed).toBe(false);
@@ -108,24 +74,8 @@ describe('BookmarkStore Module', () => {
 
   describe('getAllBookmarks', () => {
     it('should return all bookmarks', async () => {
-      const bookmarks = JSON.stringify([
-        {
-          id: '1',
-          url: 'https://github.com',
-          title: 'GitHub',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-        {
-          id: '2',
-          url: 'https://example.com',
-          title: 'Example',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-      ]);
-
-      vi.mocked(fs.readFileSync).mockReturnValue(bookmarks);
+      addBookmark('https://github.com', 'GitHub');
+      addBookmark('https://example.com', 'Example');
 
       const all = await getAllBookmarks();
 
@@ -133,8 +83,6 @@ describe('BookmarkStore Module', () => {
     });
 
     it('should return empty array when no bookmarks', async () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('[]');
-
       const all = await getAllBookmarks();
 
       expect(all).toEqual([]);
@@ -143,27 +91,15 @@ describe('BookmarkStore Module', () => {
 
   describe('getBookmarkById', () => {
     it('should return bookmark by ID', async () => {
-      const bookmarks = JSON.stringify([
-        {
-          id: '1',
-          url: 'https://github.com',
-          title: 'GitHub',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-      ]);
+      const added = addBookmark('https://github.com', 'GitHub');
 
-      vi.mocked(fs.readFileSync).mockReturnValue(bookmarks);
-
-      const bookmark = await getBookmarkById('1');
+      const bookmark = await getBookmarkById(added.id);
 
       expect(bookmark).not.toBeNull();
       expect(bookmark?.url).toBe('https://github.com');
     });
 
     it('should return null if bookmark not found', async () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('[]');
-
       const bookmark = await getBookmarkById('nonexistent');
 
       expect(bookmark).toBeNull();
@@ -172,24 +108,8 @@ describe('BookmarkStore Module', () => {
 
   describe('searchBookmarks', () => {
     it('should search by URL', async () => {
-      const bookmarks = JSON.stringify([
-        {
-          id: '1',
-          url: 'https://github.com',
-          title: 'GitHub',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-        {
-          id: '2',
-          url: 'https://example.com',
-          title: 'Example',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-      ]);
-
-      vi.mocked(fs.readFileSync).mockReturnValue(bookmarks);
+      addBookmark('https://github.com', 'GitHub');
+      addBookmark('https://example.com', 'Example');
 
       const results = await searchBookmarks('github');
 
@@ -198,24 +118,8 @@ describe('BookmarkStore Module', () => {
     });
 
     it('should search by title', async () => {
-      const bookmarks = JSON.stringify([
-        {
-          id: '1',
-          url: 'https://github.com',
-          title: 'GitHub',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-        {
-          id: '2',
-          url: 'https://example.com',
-          title: 'Example',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-      ]);
-
-      vi.mocked(fs.readFileSync).mockReturnValue(bookmarks);
+      addBookmark('https://github.com', 'GitHub');
+      addBookmark('https://example.com', 'Example');
 
       const results = await searchBookmarks('example');
 
@@ -224,26 +128,8 @@ describe('BookmarkStore Module', () => {
     });
 
     it('should search by tags', async () => {
-      const bookmarks = JSON.stringify([
-        {
-          id: '1',
-          url: 'https://github.com',
-          title: 'GitHub',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          tags: ['dev', 'coding'],
-        },
-        {
-          id: '2',
-          url: 'https://example.com',
-          title: 'Example',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          tags: ['test'],
-        },
-      ]);
-
-      vi.mocked(fs.readFileSync).mockReturnValue(bookmarks);
+      addBookmark('https://github.com', 'GitHub', ['dev', 'coding']);
+      addBookmark('https://example.com', 'Example', ['test']);
 
       const results = await searchBookmarks('dev');
 
@@ -252,17 +138,7 @@ describe('BookmarkStore Module', () => {
     });
 
     it('should be case-insensitive', async () => {
-      const bookmarks = JSON.stringify([
-        {
-          id: '1',
-          url: 'https://GITHUB.COM',
-          title: 'GitHub',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-      ]);
-
-      vi.mocked(fs.readFileSync).mockReturnValue(bookmarks);
+      addBookmark('https://GITHUB.COM', 'GitHub');
 
       const results = await searchBookmarks('github');
 
@@ -272,62 +148,31 @@ describe('BookmarkStore Module', () => {
 
   describe('updateBookmark', () => {
     it('should update bookmark', () => {
-      const bookmarks = JSON.stringify([
-        {
-          id: '1',
-          url: 'https://github.com',
-          title: 'GitHub',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-      ]);
+      const added = addBookmark('https://github.com', 'GitHub');
 
-      vi.mocked(fs.readFileSync).mockReturnValue(bookmarks);
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
-
-      const updated = updateBookmark('1', { title: 'GitHub - New Title' });
+      const updated = updateBookmark(added.id, { title: 'GitHub - New Title' });
 
       expect(updated).not.toBeNull();
       expect(updated?.title).toBe('GitHub - New Title');
     });
 
     it('should preserve ID and creation time', () => {
-      const createdAt = Date.now() - 86400000;
-      const bookmarks = JSON.stringify([
-        {
-          id: '1',
-          url: 'https://github.com',
-          title: 'GitHub',
-          createdAt,
-          updatedAt: Date.now(),
-        },
-      ]);
+      const added = addBookmark('https://github.com', 'GitHub');
+      const originalCreatedAt = added.createdAt;
 
-      vi.mocked(fs.readFileSync).mockReturnValue(bookmarks);
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
+      const updated = updateBookmark(added.id, { title: 'New Title' });
 
-      const updated = updateBookmark('1', { title: 'New Title' });
-
-      expect(updated?.id).toBe('1');
-      expect(updated?.createdAt).toBe(createdAt);
+      expect(updated?.id).toBe(added.id);
+      expect(updated?.createdAt).toBe(originalCreatedAt);
     });
 
     it('should update modification time', () => {
-      const bookmarks = JSON.stringify([
-        {
-          id: '1',
-          url: 'https://github.com',
-          title: 'GitHub',
-          createdAt: Date.now(),
-          updatedAt: Date.now() - 86400000,
-        },
-      ]);
+      const added = addBookmark('https://github.com', 'GitHub');
+      const originalUpdatedAt = added.updatedAt;
 
-      vi.mocked(fs.readFileSync).mockReturnValue(bookmarks);
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
-
+      // Wait a tiny bit to ensure timestamp changes
       const before = Date.now();
-      const updated = updateBookmark('1', { title: 'New Title' });
+      const updated = updateBookmark(added.id, { title: 'New Title' });
       const after = Date.now();
 
       expect(updated?.updatedAt).toBeGreaterThanOrEqual(before);
@@ -335,8 +180,6 @@ describe('BookmarkStore Module', () => {
     });
 
     it('should return null if bookmark not found', () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('[]');
-
       const updated = updateBookmark('nonexistent', { title: 'New Title' });
 
       expect(updated).toBeNull();
@@ -345,17 +188,7 @@ describe('BookmarkStore Module', () => {
 
   describe('isBookmarked', () => {
     it('should return true if URL is bookmarked', async () => {
-      const bookmarks = JSON.stringify([
-        {
-          id: '1',
-          url: 'https://github.com',
-          title: 'GitHub',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-      ]);
-
-      vi.mocked(fs.readFileSync).mockReturnValue(bookmarks);
+      addBookmark('https://github.com', 'GitHub');
 
       const bookmarked = await isBookmarked('https://github.com');
 
@@ -363,8 +196,6 @@ describe('BookmarkStore Module', () => {
     });
 
     it('should return false if URL is not bookmarked', async () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('[]');
-
       const bookmarked = await isBookmarked('https://nonexistent.com');
 
       expect(bookmarked).toBe(false);
@@ -373,26 +204,8 @@ describe('BookmarkStore Module', () => {
 
   describe('getBookmarksByTag', () => {
     it('should return bookmarks with specific tag', async () => {
-      const bookmarks = JSON.stringify([
-        {
-          id: '1',
-          url: 'https://github.com',
-          title: 'GitHub',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          tags: ['dev', 'coding'],
-        },
-        {
-          id: '2',
-          url: 'https://example.com',
-          title: 'Example',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-          tags: ['test'],
-        },
-      ]);
-
-      vi.mocked(fs.readFileSync).mockReturnValue(bookmarks);
+      addBookmark('https://github.com', 'GitHub', ['dev', 'coding']);
+      addBookmark('https://example.com', 'Example', ['test']);
 
       const results = await getBookmarksByTag('dev');
 
@@ -403,38 +216,27 @@ describe('BookmarkStore Module', () => {
 
   describe('clearBookmarks', () => {
     it('should clear all bookmarks', () => {
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
+      addBookmark('https://github.com', 'GitHub');
+      addBookmark('https://example.com', 'Example');
 
       clearBookmarks();
 
-      expect(vi.mocked(fs.writeFileSync)).toHaveBeenCalled();
-      const writeCall = vi.mocked(fs.writeFileSync).mock.calls[0];
-      const writtenData = JSON.parse(writeCall[1] as string);
-      expect(writtenData).toEqual([]);
+      const stored = localStorage.getItem('arc-browser-bookmarks');
+      const bookmarks = JSON.parse(stored!);
+      expect(bookmarks).toEqual([]);
     });
   });
 
   describe('getBookmarksSorted', () => {
     it('should return bookmarks sorted by creation date descending', async () => {
-      const now = Date.now();
-      const bookmarks = JSON.stringify([
-        {
-          id: '1',
-          url: 'https://old.com',
-          title: 'Old',
-          createdAt: now - 86400000,
-          updatedAt: now - 86400000,
-        },
-        {
-          id: '2',
-          url: 'https://recent.com',
-          title: 'Recent',
-          createdAt: now,
-          updatedAt: now,
-        },
-      ]);
-
-      vi.mocked(fs.readFileSync).mockReturnValue(bookmarks);
+      const old = addBookmark('https://old.com', 'Old');
+      // Manually set older timestamp
+      const stored = localStorage.getItem('arc-browser-bookmarks');
+      const bookmarks = JSON.parse(stored!);
+      bookmarks[0].createdAt = Date.now() - 86400000;
+      localStorage.setItem('arc-browser-bookmarks', JSON.stringify(bookmarks));
+      
+      const recent = addBookmark('https://recent.com', 'Recent');
 
       const sorted = await getBookmarksSorted('desc');
 
@@ -443,25 +245,14 @@ describe('BookmarkStore Module', () => {
     });
 
     it('should return bookmarks sorted by creation date ascending', async () => {
-      const now = Date.now();
-      const bookmarks = JSON.stringify([
-        {
-          id: '1',
-          url: 'https://old.com',
-          title: 'Old',
-          createdAt: now - 86400000,
-          updatedAt: now - 86400000,
-        },
-        {
-          id: '2',
-          url: 'https://recent.com',
-          title: 'Recent',
-          createdAt: now,
-          updatedAt: now,
-        },
-      ]);
-
-      vi.mocked(fs.readFileSync).mockReturnValue(bookmarks);
+      const old = addBookmark('https://old.com', 'Old');
+      // Manually set older timestamp
+      const stored = localStorage.getItem('arc-browser-bookmarks');
+      const bookmarks = JSON.parse(stored!);
+      bookmarks[0].createdAt = Date.now() - 86400000;
+      localStorage.setItem('arc-browser-bookmarks', JSON.stringify(bookmarks));
+      
+      const recent = addBookmark('https://recent.com', 'Recent');
 
       const sorted = await getBookmarksSorted('asc');
 
@@ -472,17 +263,7 @@ describe('BookmarkStore Module', () => {
 
   describe('exportBookmarks', () => {
     it('should export bookmarks as JSON string', () => {
-      const bookmarks = JSON.stringify([
-        {
-          id: '1',
-          url: 'https://github.com',
-          title: 'GitHub',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-      ]);
-
-      vi.mocked(fs.readFileSync).mockReturnValue(bookmarks);
+      addBookmark('https://github.com', 'GitHub');
 
       const exported = exportBookmarks();
       const parsed = JSON.parse(exported);
@@ -494,15 +275,7 @@ describe('BookmarkStore Module', () => {
 
   describe('importBookmarks', () => {
     it('should import bookmarks in merge mode', () => {
-      const existing = JSON.stringify([
-        {
-          id: '1',
-          url: 'https://github.com',
-          title: 'GitHub',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-      ]);
+      addBookmark('https://github.com', 'GitHub');
 
       const toImport = JSON.stringify([
         {
@@ -511,11 +284,9 @@ describe('BookmarkStore Module', () => {
           title: 'Example',
           createdAt: Date.now(),
           updatedAt: Date.now(),
+          tags: [],
         },
       ]);
-
-      vi.mocked(fs.readFileSync).mockReturnValue(existing);
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
       const result = importBookmarks(toImport, 'merge');
 
@@ -523,6 +294,8 @@ describe('BookmarkStore Module', () => {
     });
 
     it('should import bookmarks in replace mode', () => {
+      addBookmark('https://github.com', 'GitHub');
+
       const toImport = JSON.stringify([
         {
           id: '2',
@@ -530,10 +303,9 @@ describe('BookmarkStore Module', () => {
           title: 'Example',
           createdAt: Date.now(),
           updatedAt: Date.now(),
+          tags: [],
         },
       ]);
-
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
       const result = importBookmarks(toImport, 'replace');
 
@@ -542,15 +314,7 @@ describe('BookmarkStore Module', () => {
     });
 
     it('should avoid duplicate URLs in merge mode', () => {
-      const existing = JSON.stringify([
-        {
-          id: '1',
-          url: 'https://github.com',
-          title: 'GitHub',
-          createdAt: Date.now(),
-          updatedAt: Date.now(),
-        },
-      ]);
+      addBookmark('https://github.com', 'GitHub');
 
       const toImport = JSON.stringify([
         {
@@ -559,11 +323,9 @@ describe('BookmarkStore Module', () => {
           title: 'GitHub',
           createdAt: Date.now(),
           updatedAt: Date.now(),
+          tags: [],
         },
       ]);
-
-      vi.mocked(fs.readFileSync).mockReturnValue(existing);
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
 
       const result = importBookmarks(toImport, 'merge');
 

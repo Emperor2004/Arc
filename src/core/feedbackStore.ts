@@ -1,42 +1,35 @@
 import { RecommendationFeedback } from './types';
-import * as fs from 'fs';
-import * as path from 'path';
 
-const FEEDBACK_FILE = path.join(process.env.APPDATA || process.env.HOME || '.', 'arc-browser', 'data', 'feedback.json');
-
-// Ensure directory exists
-function ensureDir() {
-  const dir = path.dirname(FEEDBACK_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-}
+// Browser-safe feedback storage using localStorage
+const FEEDBACK_KEY = 'arc-browser-feedback';
 
 /**
- * Load feedback from file
+ * Load feedback from localStorage
  */
 function loadFeedback(): RecommendationFeedback[] {
   try {
-    ensureDir();
-    if (fs.existsSync(FEEDBACK_FILE)) {
-      const data = fs.readFileSync(FEEDBACK_FILE, 'utf-8');
-      return JSON.parse(data);
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const stored = localStorage.getItem(FEEDBACK_KEY);
+      if (stored) {
+        return JSON.parse(stored);
+      }
     }
   } catch (error) {
-    console.error('Error loading feedback:', error);
+    console.error('Error loading feedback from localStorage:', error);
   }
   return [];
 }
 
 /**
- * Save feedback to file
+ * Save feedback to localStorage
  */
 function saveFeedback(feedback: RecommendationFeedback[]): void {
   try {
-    ensureDir();
-    fs.writeFileSync(FEEDBACK_FILE, JSON.stringify(feedback, null, 2), 'utf-8');
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem(FEEDBACK_KEY, JSON.stringify(feedback));
+    }
   } catch (error) {
-    console.error('Error saving feedback:', error);
+    console.error('Error saving feedback to localStorage:', error);
   }
 }
 

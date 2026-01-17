@@ -1,6 +1,4 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import * as fs from 'fs';
-import * as path from 'path';
 import {
   addHistoryEntry,
   getRecentHistory,
@@ -10,24 +8,30 @@ import {
   searchHistory,
 } from './historyStore';
 
-// Mock fs module
-vi.mock('fs');
-vi.mock('path');
+// Mock localStorage
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    getItem: (key: string) => store[key] || null,
+    setItem: (key: string, value: string) => { store[key] = value; },
+    removeItem: (key: string) => { delete store[key]; },
+    clear: () => { store = {}; },
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+});
 
 describe('HistoryStore Module', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock path.join to return a consistent path
-    vi.mocked(path.join).mockReturnValue('/mock/history.json');
-    // Mock fs.existsSync to return true
-    vi.mocked(fs.existsSync).mockReturnValue(true);
+    localStorageMock.clear();
   });
 
   describe('addHistoryEntry', () => {
     it('should add a new history entry', () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('[]');
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
-
       const entry = addHistoryEntry('https://github.com', 'GitHub');
 
       expect(entry.url).toBe('https://github.com');
@@ -37,47 +41,30 @@ describe('HistoryStore Module', () => {
     });
 
     it('should increment visit count for existing URL', () => {
-      const existingHistory = JSON.stringify([
-        {
-          id: 1,
-          url: 'https://github.com',
-          title: 'GitHub',
-          visited_at: Date.now() - 86400000,
-          visit_count: 5,
-        },
-      ]);
-
-      vi.mocked(fs.readFileSync).mockReturnValue(existingHistory);
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
-
+      // Add initial entry multiple times to get to visit count 5
+      addHistoryEntry('https://github.com', 'GitHub');
+      addHistoryEntry('https://github.com', 'GitHub');
+      addHistoryEntry('https://github.com', 'GitHub');
+      addHistoryEntry('https://github.com', 'GitHub');
+      addHistoryEntry('https://github.com', 'GitHub');
+      
+      // Add one more time to get to 6
       const entry = addHistoryEntry('https://github.com', 'GitHub');
 
       expect(entry.visit_count).toBe(6);
     });
 
     it('should update title if provided', () => {
-      const existingHistory = JSON.stringify([
-        {
-          id: 1,
-          url: 'https://github.com',
-          title: 'Old Title',
-          visited_at: Date.now() - 86400000,
-          visit_count: 5,
-        },
-      ]);
-
-      vi.mocked(fs.readFileSync).mockReturnValue(existingHistory);
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
-
+      // Add initial entry
+      addHistoryEntry('https://github.com', 'Old Title');
+      
+      // Update with new title
       const entry = addHistoryEntry('https://github.com', 'New Title');
 
       expect(entry.title).toBe('New Title');
     });
 
     it('should handle empty history', () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('[]');
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
-
       const entry = addHistoryEntry('https://example.com', 'Example');
 
       expect(entry.id).toBe(1);
@@ -88,7 +75,7 @@ describe('HistoryStore Module', () => {
   describe('getRecentHistory', () => {
     it('should return recent history sorted by visited_at', async () => {
       const now = Date.now();
-      const history = JSON.stringify([
+      const history = [
         {
           id: 1,
           url: 'https://old.com',
@@ -103,9 +90,9 @@ describe('HistoryStore Module', () => {
           visited_at: now,
           visit_count: 1,
         },
-      ]);
+      ];
 
-      vi.mocked(fs.readFileSync).mockReturnValue(history);
+      localStorageMock.setItem('arc-browser-history', JSON.stringify(history));
 
       const recent = await getRecentHistory(10);
 
@@ -114,17 +101,15 @@ describe('HistoryStore Module', () => {
     });
 
     it('should respect limit parameter', async () => {
-      const history = JSON.stringify(
-        Array.from({ length: 20 }, (_, i) => ({
-          id: i,
-          url: `https://example${i}.com`,
-          title: `Example ${i}`,
-          visited_at: Date.now() - i * 86400000,
-          visit_count: 1,
-        }))
-      );
+      const history = Array.from({ length: 20 }, (_, i) => ({
+        id: i,
+        url: `https://example${i}.com`,
+        title: `Example ${i}`,
+        visited_at: Date.now() - i * 86400000,
+        visit_count: 1,
+      }));
 
-      vi.mocked(fs.readFileSync).mockReturnValue(history);
+      localStorageMock.setItem('arc-browser-history', JSON.stringify(history));
 
       const recent = await getRecentHistory(5);
 
@@ -132,7 +117,7 @@ describe('HistoryStore Module', () => {
     });
 
     it('should return empty array when no history', async () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('[]');
+      localStorageMock.setItem('arc-browser-history', '[]');
 
       const recent = await getRecentHistory(10);
 
@@ -142,7 +127,7 @@ describe('HistoryStore Module', () => {
 
   describe('getAllHistory', () => {
     it('should return all history entries', async () => {
-      const history = JSON.stringify([
+      const history = [
         {
           id: 1,
           url: 'https://example1.com',
@@ -157,9 +142,9 @@ describe('HistoryStore Module', () => {
           visited_at: Date.now(),
           visit_count: 1,
         },
-      ]);
+      ];
 
-      vi.mocked(fs.readFileSync).mockReturnValue(history);
+      localStorageMock.setItem('arc-browser-history', JSON.stringify(history));
 
       const all = await getAllHistory();
 
@@ -169,20 +154,21 @@ describe('HistoryStore Module', () => {
 
   describe('clearHistory', () => {
     it('should clear all history', () => {
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
+      // Set some initial history
+      localStorageMock.setItem('arc-browser-history', JSON.stringify([
+        { id: 1, url: 'https://example.com', title: 'Example', visited_at: Date.now(), visit_count: 1 }
+      ]));
 
       clearHistory();
 
-      expect(vi.mocked(fs.writeFileSync)).toHaveBeenCalled();
-      const writeCall = vi.mocked(fs.writeFileSync).mock.calls[0];
-      const writtenData = JSON.parse(writeCall[1] as string);
-      expect(writtenData).toEqual([]);
+      const stored = localStorageMock.getItem('arc-browser-history');
+      expect(JSON.parse(stored || '[]')).toEqual([]);
     });
   });
 
   describe('removeHistoryEntry', () => {
     it('should remove history entry by URL', () => {
-      const history = JSON.stringify([
+      const history = [
         {
           id: 1,
           url: 'https://github.com',
@@ -197,15 +183,14 @@ describe('HistoryStore Module', () => {
           visited_at: Date.now(),
           visit_count: 1,
         },
-      ]);
+      ];
 
-      vi.mocked(fs.readFileSync).mockReturnValue(history);
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
+      localStorageMock.setItem('arc-browser-history', JSON.stringify(history));
 
       removeHistoryEntry('https://github.com');
 
-      const writeCall = vi.mocked(fs.writeFileSync).mock.calls[0];
-      const writtenData = JSON.parse(writeCall[1] as string);
+      const stored = localStorageMock.getItem('arc-browser-history');
+      const writtenData = JSON.parse(stored || '[]');
 
       expect(writtenData.length).toBe(1);
       expect(writtenData[0].url).toBe('https://example.com');
@@ -214,7 +199,7 @@ describe('HistoryStore Module', () => {
 
   describe('searchHistory', () => {
     it('should search by URL', async () => {
-      const history = JSON.stringify([
+      const history = [
         {
           id: 1,
           url: 'https://github.com',
@@ -229,9 +214,9 @@ describe('HistoryStore Module', () => {
           visited_at: Date.now(),
           visit_count: 1,
         },
-      ]);
+      ];
 
-      vi.mocked(fs.readFileSync).mockReturnValue(history);
+      localStorageMock.setItem('arc-browser-history', JSON.stringify(history));
 
       const results = await searchHistory('github');
 
@@ -240,7 +225,7 @@ describe('HistoryStore Module', () => {
     });
 
     it('should search by title', async () => {
-      const history = JSON.stringify([
+      const history = [
         {
           id: 1,
           url: 'https://github.com',
@@ -255,9 +240,9 @@ describe('HistoryStore Module', () => {
           visited_at: Date.now(),
           visit_count: 1,
         },
-      ]);
+      ];
 
-      vi.mocked(fs.readFileSync).mockReturnValue(history);
+      localStorageMock.setItem('arc-browser-history', JSON.stringify(history));
 
       const results = await searchHistory('example');
 
@@ -266,7 +251,7 @@ describe('HistoryStore Module', () => {
     });
 
     it('should be case-insensitive', async () => {
-      const history = JSON.stringify([
+      const history = [
         {
           id: 1,
           url: 'https://GITHUB.COM',
@@ -274,9 +259,9 @@ describe('HistoryStore Module', () => {
           visited_at: Date.now(),
           visit_count: 1,
         },
-      ]);
+      ];
 
-      vi.mocked(fs.readFileSync).mockReturnValue(history);
+      localStorageMock.setItem('arc-browser-history', JSON.stringify(history));
 
       const results = await searchHistory('github');
 

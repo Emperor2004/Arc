@@ -1,7 +1,25 @@
+// Use Main versions if in main process, otherwise use localStorage versions
+import * as historyStoreMain from './historyStoreMain';
 import * as historyStore from './historyStore';
 import * as feedbackStore from './feedbackStore';
+import * as bookmarkStoreMain from './bookmarkStoreMain';
 import * as bookmarkStore from './bookmarkStore';
+import * as settingsStoreMain from './settingsStoreMain';
 import * as settingsStore from './settingsStore';
+
+// Detect if we're in main process
+function isMainProcess(): boolean {
+  try {
+    return typeof process !== 'undefined' && process.type !== 'renderer';
+  } catch {
+    return false;
+  }
+}
+
+// Use appropriate versions based on process
+const historyStoreImpl = isMainProcess() ? historyStoreMain : historyStore;
+const bookmarkStoreImpl = isMainProcess() ? bookmarkStoreMain : bookmarkStore;
+const settingsStoreImpl = isMainProcess() ? settingsStoreMain : settingsStore;
 
 export interface ExportData {
   version: string;
@@ -18,10 +36,12 @@ export type ImportMode = 'merge' | 'replace';
  * Export all data to a JSON object
  */
 export async function exportData(): Promise<ExportData> {
-  const history = await historyStore.getAllHistory();
+  const history = await historyStoreImpl.getAllHistory();
   const feedback = await feedbackStore.getAllFeedback();
-  const bookmarks = await bookmarkStore.getAllBookmarks();
-  const settings = settingsStore.getSettings();
+  const bookmarks = await bookmarkStoreImpl.getAllBookmarks();
+  const settings = isMainProcess() 
+    ? await settingsStoreImpl.getSettings() 
+    : settingsStoreImpl.getSettings();
 
   return {
     version: '1.0.0',
@@ -127,14 +147,14 @@ export async function importData(data: ExportData, mode: ImportMode = 'merge'): 
 
   if (mode === 'replace') {
     // Clear existing data
-    historyStore.clearHistory();
-    feedbackStore.clearFeedback();
-    bookmarkStore.clearBookmarks();
+    await historyStoreImpl.clearHistory();
+    await feedbackStore.clearFeedback();
+    await bookmarkStoreImpl.clearBookmarks();
   }
 
   // Import history
   for (const entry of data.history) {
-    historyStore.addHistoryEntry(entry.url, entry.title || '');
+    await historyStoreImpl.addHistoryEntry(entry.url, entry.title || '');
   }
 
   // Import feedback
@@ -144,17 +164,27 @@ export async function importData(data: ExportData, mode: ImportMode = 'merge'): 
 
   // Import bookmarks
   for (const entry of data.bookmarks) {
-    bookmarkStore.addBookmark(entry.url, entry.title);
+    await bookmarkStoreImpl.addBookmark(entry.url, entry.title);
   }
 
   // Import settings (merge mode only for settings)
   if (mode === 'merge') {
     const updates = data.settings as Record<string, unknown>;
-    settingsStore.updateSettings(updates as any);
+    if (isMainProcess()) {
+      await settingsStoreImpl.updateSettings(updates as any);
+    } else {
+      settingsStoreImpl.updateSettings(updates as any);
+    }
   } else {
     // Replace mode: reset and set all settings
-    settingsStore.resetSettings();
-    const updates = data.settings as Record<string, unknown>;
-    settingsStore.updateSettings(updates as any);
+    if (isMainProcess()) {
+      await settingsStoreImpl.resetSettings();
+      const updates = data.settings as Record<string, unknown>;
+      await settingsStoreImpl.updateSettings(updates as any);
+    } else {
+      settingsStoreImpl.resetSettings();
+      const updates = data.settings as Record<string, unknown>;
+      settingsStoreImpl.updateSettings(updates as any);
+    }
   }
 }

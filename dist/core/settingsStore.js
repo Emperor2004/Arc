@@ -1,46 +1,12 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getSettings = getSettings;
 exports.updateSettings = updateSettings;
 exports.getSetting = getSetting;
 exports.updateSetting = updateSetting;
 exports.resetSettings = resetSettings;
-const fs = __importStar(require("fs"));
-const path = __importStar(require("path"));
-const SETTINGS_FILE = path.join(process.env.APPDATA || process.env.HOME || '.', 'arc-browser', 'data', 'settings.json');
+// Browser-safe settings storage using localStorage
+const SETTINGS_KEY = 'arc-browser-settings';
 const DEFAULT_SETTINGS = {
     theme: 'system',
     jarvisEnabled: true,
@@ -50,6 +16,15 @@ const DEFAULT_SETTINGS = {
     tabOrder: [],
     keyboardShortcutsEnabled: true,
     restorePreviousSession: true,
+    // Personalization defaults
+    recencyWeight: 0.5,
+    frequencyWeight: 0.3,
+    feedbackWeight: 0.2,
+    minScore: 0.1,
+    maxRecommendations: 5,
+    ollamaModel: 'llama3:latest',
+    ollamaEnabled: true, // Enable Ollama by default
+    ollamaEndpoint: 'http://localhost:11434',
     // Accessibility defaults
     reducedMotion: false,
     highContrast: false,
@@ -57,39 +32,32 @@ const DEFAULT_SETTINGS = {
     focusIndicators: true,
     screenReaderOptimizations: false,
 };
-// Ensure directory exists
-function ensureDir() {
-    const dir = path.dirname(SETTINGS_FILE);
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-    }
-}
-/**
- * Load settings from file
- */
+// Browser-safe settings management using localStorage
 function loadSettings() {
     try {
-        ensureDir();
-        if (fs.existsSync(SETTINGS_FILE)) {
-            const data = fs.readFileSync(SETTINGS_FILE, 'utf-8');
-            return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
+        if (typeof window !== 'undefined' && window.localStorage) {
+            const stored = localStorage.getItem(SETTINGS_KEY);
+            if (stored) {
+                return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+            }
         }
     }
     catch (error) {
-        console.error('Error loading settings:', error);
+        console.error('Error loading settings from localStorage:', error);
     }
     return DEFAULT_SETTINGS;
 }
 /**
- * Save settings to file
+ * Save settings to localStorage
  */
 function saveSettings(settings) {
     try {
-        ensureDir();
-        fs.writeFileSync(SETTINGS_FILE, JSON.stringify(settings, null, 2), 'utf-8');
+        if (typeof window !== 'undefined' && window.localStorage) {
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        }
     }
     catch (error) {
-        console.error('Error saving settings:', error);
+        console.error('Error saving settings to localStorage:', error);
     }
 }
 /**

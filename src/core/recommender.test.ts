@@ -1,11 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  extractDomain,
-  extractKeywords,
-  buildFeedbackMap,
-  applyFeedbackToScore,
-  getJarvisRecommendations,
-} from './recommender';
 import { HistoryEntry, RecommendationFeedback } from './types';
 import * as historyStore from './historyStore';
 import * as feedbackStore from './feedbackStore';
@@ -13,6 +6,25 @@ import * as feedbackStore from './feedbackStore';
 // Mock the store modules
 vi.mock('./historyStore');
 vi.mock('./feedbackStore');
+// Mock the main process store to prevent it from being used
+vi.mock('./historyStoreMain', () => ({
+  getRecentHistory: vi.fn(),
+}));
+
+// Mock process to ensure we're in renderer mode for tests
+Object.defineProperty(global, 'process', {
+  value: { type: 'renderer' },
+  writable: true,
+});
+
+// Import after mocking
+const {
+  extractDomain,
+  extractKeywords,
+  buildFeedbackMap,
+  applyFeedbackToScore,
+  getJarvisRecommendations,
+} = await import('./recommender');
 
 describe('Recommender Module', () => {
   beforeEach(() => {

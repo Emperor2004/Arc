@@ -24,7 +24,7 @@ export interface JarvisController {
     handleOpen: (url: string) => void;
 }
 
-// Local helper for "smart" replies
+// Local helper for "smart" replies (fallback when Ollama is disabled)
 const getJarvisReply = async (text: string): Promise<{ text: string; action?: 'refresh' | 'history' }> => {
     const lower = text.toLowerCase();
 
@@ -75,20 +75,22 @@ export const useJarvisController = (onNavigate?: (url: string) => void): JarvisC
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const fetchRecommendations = async () => {
+        console.log('💡 [Controller] Fetching recommendations...');
         setStatus('thinking');
         setError(null);
         try {
             if (window.arc && window.arc.getJarvisRecommendations) {
                 const recs = await window.arc.getJarvisRecommendations();
+                console.log(`💡 [Controller] Received ${recs.length} recommendations`);
                 setRecommendations(recs);
                 setStatus('idle');
             } else {
-                console.warn('Jarvis API not available');
+                console.warn('⚠️ [Controller] Jarvis API not available');
                 setStatus('error');
                 setError('Jarvis API missing');
             }
         } catch (err) {
-            console.error('Failed to load recommendations:', err);
+            console.error('❌ [Controller] Failed to load recommendations:', err);
             setStatus('error');
             setError('Could not reach Jarvis.');
         }
@@ -98,7 +100,8 @@ export const useJarvisController = (onNavigate?: (url: string) => void): JarvisC
         if (!input.trim()) return;
 
         const userText = input.trim();
-        setMessages(prev => [...prev, { from: 'user', text: userText }]);
+        const newMessages = [...messages, { from: 'user' as const, text: userText }];
+        setMessages(newMessages);
         setInput('');
         
         // Reset textarea height
@@ -109,17 +112,88 @@ export const useJarvisController = (onNavigate?: (url: string) => void): JarvisC
 
         setStatus('thinking');
 
-        // Simulate thinking delay
-        setTimeout(async () => {
-            const reply = await getJarvisReply(userText);
-            setMessages(prev => [...prev, { from: 'jarvis', text: reply.text }]);
-
-            if (reply.action === 'refresh') {
-                fetchRecommendations();
+        try {
+            console.log('💬 [UI] Sending chat message:', userText.substring(0, 50) + '...');
+            
+            // Check if jarvisChat API is available
+            if (window.arc && window.arc.jarvisChat) {
+                console.log('💬 [UI] Using IPC jarvisChat API');
+                
+                const result = await window.arc.jarvisChat(newMessages);
+                
+                console.log('💬 [UI] Chat result:', {
+                    ok: result.ok,
+                    useFallback: result.useFallback,
+                    hasReply: !!result.reply,
+                    hasError: !!result.error
+                });
+                
+                // Handle error response
+                if (!result.ok) {
+                    console.error('❌ [UI] Chat request failed:', result.error);
+                    const errorMessage = result.error 
+                        ? `Error: ${result.error}`
+                        : 'Sorry, I encountered an error. Please try again.';
+                    
+                    setMessages(prev => [...prev, { 
+                        from: 'jarvis', 
+                        text: errorMessage
+                    }]);
+                    setStatus('error');
+                    return;
+                }
+                
+                // Handle fallback mode
+                if (result.useFallback) {
+                    console.log('💬 [UI] Using fallback mode');
+                    
+                    // Show error message if provided
+                    if (result.reply) {
+                        console.log('💬 [UI] Showing error message:', result.reply);
+                        setMessages(prev => [...prev, { from: 'jarvis', text: result.reply }]);
+                    }
+                    
+                    // Then provide fallback response
+                    setTimeout(async () => {
+                        console.log('💬 [UI] Getting fallback response');
+                        const fallbackReply = await getJarvisReply(userText);
+                        setMessages(prev => [...prev, { from: 'jarvis', text: fallbackReply.text }]);
+                        
+                        if (fallbackReply.action === 'refresh') {
+                            fetchRecommendations();
+                        } else {
+                            setStatus('idle');
+                        }
+                    }, 500);
+                } else {
+                    // Success - show AI response
+                    console.log('✅ [UI] AI response received');
+                    setMessages(prev => [...prev, { from: 'jarvis', text: result.reply }]);
+                    setStatus('idle');
+                }
             } else {
-                setStatus('idle');
+                console.warn('⚠️ [UI] jarvisChat API not available, using local fallback');
+                
+                // Fallback to local rule-based responses
+                setTimeout(async () => {
+                    const reply = await getJarvisReply(userText);
+                    setMessages(prev => [...prev, { from: 'jarvis', text: reply.text }]);
+
+                    if (reply.action === 'refresh') {
+                        fetchRecommendations();
+                    } else {
+                        setStatus('idle');
+                    }
+                }, 600);
             }
-        }, 600);
+        } catch (error) {
+            console.error('❌ Error in handleSend:', error);
+            setMessages(prev => [...prev, { 
+                from: 'jarvis', 
+                text: 'Sorry, I encountered an unexpected error. Please try again.' 
+            }]);
+            setStatus('error');
+        }
     };
 
     const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -140,6 +214,7 @@ export const useJarvisController = (onNavigate?: (url: string) => void): JarvisC
     };
 
     const handleFeedback = async (rec: Recommendation, value: FeedbackValue) => {
+        console.log(`👍 [Controller] Feedback: ${value} for ${rec.url}`);
         // Update local state
         setFeedback(prev => ({ ...prev, [rec.url]: value }));
 
@@ -152,26 +227,34 @@ export const useJarvisController = (onNavigate?: (url: string) => void): JarvisC
                     value,
                     created_at: Date.now()
                 });
-                console.log(`Feedback sent: ${value} for ${rec.url}`);
+                console.log(`✅ [Controller] Feedback sent successfully`);
             } else {
-                console.warn('sendJarvisFeedback API not available');
+                console.warn('⚠️ [Controller] sendJarvisFeedback API not available');
             }
         } catch (error) {
-            console.error('Failed to send feedback:', error);
+            console.error('❌ [Controller] Failed to send feedback:', error);
         }
     };
 
     const handleOpen = (url: string) => {
+        console.log('🔗 [Controller] Opening recommendation:', url);
         if (onNavigate) {
+            console.log('🔗 [Controller] Using onNavigate callback');
             onNavigate(url);
         } else if (window.arc) {
+            console.log('🔗 [Controller] Using window.arc.navigate');
             window.arc.navigate(url);
+        } else {
+            console.error('❌ [Controller] No navigation method available');
         }
     };
 
     // Scroll to bottom of chat
     useEffect(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        // Check if scrollIntoView is available (not available in test environments)
+        if (messagesEndRef.current && typeof messagesEndRef.current.scrollIntoView === 'function') {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
     }, [messages]);
 
     return {

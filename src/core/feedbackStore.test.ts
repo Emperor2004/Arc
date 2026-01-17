@@ -1,6 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import * as fs from 'fs';
-import * as path from 'path';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   addFeedback,
   getAllFeedback,
@@ -10,24 +8,14 @@ import {
   getFeedbackStats,
 } from './feedbackStore';
 
-// Mock fs module
-vi.mock('fs');
-vi.mock('path');
-
 describe('FeedbackStore Module', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    // Mock path.join to return a consistent path
-    vi.mocked(path.join).mockReturnValue('/mock/feedback.json');
-    // Mock fs.existsSync to return true
-    vi.mocked(fs.existsSync).mockReturnValue(true);
+    // Clear localStorage before each test
+    localStorage.clear();
   });
 
   describe('addFeedback', () => {
     it('should add a like feedback entry', () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('[]');
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
-
       const feedback = addFeedback('https://github.com', 'like');
 
       expect(feedback.url).toBe('https://github.com');
@@ -36,9 +24,6 @@ describe('FeedbackStore Module', () => {
     });
 
     it('should add a dislike feedback entry', () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('[]');
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
-
       const feedback = addFeedback('https://example.com', 'dislike');
 
       expect(feedback.url).toBe('https://example.com');
@@ -46,27 +31,16 @@ describe('FeedbackStore Module', () => {
     });
 
     it('should increment ID for multiple entries', () => {
-      const existingFeedback = JSON.stringify([
-        {
-          id: 1,
-          url: 'https://github.com',
-          value: 'like',
-          created_at: Date.now(),
-        },
-      ]);
+      // Add first feedback
+      const feedback1 = addFeedback('https://github.com', 'like');
+      expect(feedback1.id).toBe(1);
 
-      vi.mocked(fs.readFileSync).mockReturnValue(existingFeedback);
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
-
-      const feedback = addFeedback('https://example.com', 'dislike');
-
-      expect(feedback.id).toBe(2);
+      // Add second feedback
+      const feedback2 = addFeedback('https://example.com', 'dislike');
+      expect(feedback2.id).toBe(2);
     });
 
     it('should set created_at timestamp', () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('[]');
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
-
       const before = Date.now();
       const feedback = addFeedback('https://github.com', 'like');
       const after = Date.now();
@@ -78,22 +52,9 @@ describe('FeedbackStore Module', () => {
 
   describe('getAllFeedback', () => {
     it('should return all feedback entries', async () => {
-      const feedbackData = JSON.stringify([
-        {
-          id: 1,
-          url: 'https://github.com',
-          value: 'like',
-          created_at: Date.now(),
-        },
-        {
-          id: 2,
-          url: 'https://example.com',
-          value: 'dislike',
-          created_at: Date.now(),
-        },
-      ]);
-
-      vi.mocked(fs.readFileSync).mockReturnValue(feedbackData);
+      // Add feedback entries
+      addFeedback('https://github.com', 'like');
+      addFeedback('https://example.com', 'dislike');
 
       const all = await getAllFeedback();
 
@@ -101,8 +62,6 @@ describe('FeedbackStore Module', () => {
     });
 
     it('should return empty array when no feedback', async () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('[]');
-
       const all = await getAllFeedback();
 
       expect(all).toEqual([]);
@@ -111,28 +70,10 @@ describe('FeedbackStore Module', () => {
 
   describe('getFeedbackByUrl', () => {
     it('should return feedback for specific URL', async () => {
-      const feedbackData = JSON.stringify([
-        {
-          id: 1,
-          url: 'https://github.com',
-          value: 'like',
-          created_at: Date.now(),
-        },
-        {
-          id: 2,
-          url: 'https://github.com',
-          value: 'like',
-          created_at: Date.now(),
-        },
-        {
-          id: 3,
-          url: 'https://example.com',
-          value: 'dislike',
-          created_at: Date.now(),
-        },
-      ]);
-
-      vi.mocked(fs.readFileSync).mockReturnValue(feedbackData);
+      // Add feedback entries
+      addFeedback('https://github.com', 'like');
+      addFeedback('https://github.com', 'like');
+      addFeedback('https://example.com', 'dislike');
 
       const feedback = await getFeedbackByUrl('https://github.com');
 
@@ -141,16 +82,7 @@ describe('FeedbackStore Module', () => {
     });
 
     it('should return empty array for URL with no feedback', async () => {
-      const feedbackData = JSON.stringify([
-        {
-          id: 1,
-          url: 'https://github.com',
-          value: 'like',
-          created_at: Date.now(),
-        },
-      ]);
-
-      vi.mocked(fs.readFileSync).mockReturnValue(feedbackData);
+      addFeedback('https://github.com', 'like');
 
       const feedback = await getFeedbackByUrl('https://nonexistent.com');
 
@@ -160,71 +92,41 @@ describe('FeedbackStore Module', () => {
 
   describe('clearFeedback', () => {
     it('should clear all feedback', () => {
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
+      // Add some feedback
+      addFeedback('https://github.com', 'like');
+      addFeedback('https://example.com', 'dislike');
 
+      // Clear feedback
       clearFeedback();
 
-      expect(vi.mocked(fs.writeFileSync)).toHaveBeenCalled();
-      const writeCall = vi.mocked(fs.writeFileSync).mock.calls[0];
-      const writtenData = JSON.parse(writeCall[1] as string);
-      expect(writtenData).toEqual([]);
+      // Verify cleared
+      const all = getAllFeedback();
+      expect(all).resolves.toEqual([]);
     });
   });
 
   describe('removeFeedback', () => {
-    it('should remove feedback entry by ID', () => {
-      const feedbackData = JSON.stringify([
-        {
-          id: 1,
-          url: 'https://github.com',
-          value: 'like',
-          created_at: Date.now(),
-        },
-        {
-          id: 2,
-          url: 'https://example.com',
-          value: 'dislike',
-          created_at: Date.now(),
-        },
-      ]);
+    it('should remove feedback entry by ID', async () => {
+      // Add feedback entries
+      const feedback1 = addFeedback('https://github.com', 'like');
+      const feedback2 = addFeedback('https://example.com', 'dislike');
 
-      vi.mocked(fs.readFileSync).mockReturnValue(feedbackData);
-      vi.mocked(fs.writeFileSync).mockImplementation(() => {});
+      // Remove first feedback
+      removeFeedback(feedback1.id);
 
-      removeFeedback(1);
-
-      const writeCall = vi.mocked(fs.writeFileSync).mock.calls[0];
-      const writtenData = JSON.parse(writeCall[1] as string);
-
-      expect(writtenData.length).toBe(1);
-      expect(writtenData[0].id).toBe(2);
+      // Verify removal
+      const all = await getAllFeedback();
+      expect(all.length).toBe(1);
+      expect(all[0].id).toBe(feedback2.id);
     });
   });
 
   describe('getFeedbackStats', () => {
     it('should return feedback statistics for URL', async () => {
-      const feedbackData = JSON.stringify([
-        {
-          id: 1,
-          url: 'https://github.com',
-          value: 'like',
-          created_at: Date.now(),
-        },
-        {
-          id: 2,
-          url: 'https://github.com',
-          value: 'like',
-          created_at: Date.now(),
-        },
-        {
-          id: 3,
-          url: 'https://github.com',
-          value: 'dislike',
-          created_at: Date.now(),
-        },
-      ]);
-
-      vi.mocked(fs.readFileSync).mockReturnValue(feedbackData);
+      // Add feedback entries
+      addFeedback('https://github.com', 'like');
+      addFeedback('https://github.com', 'like');
+      addFeedback('https://github.com', 'dislike');
 
       const stats = await getFeedbackStats('https://github.com');
 
@@ -233,8 +135,6 @@ describe('FeedbackStore Module', () => {
     });
 
     it('should return zero stats for URL with no feedback', async () => {
-      vi.mocked(fs.readFileSync).mockReturnValue('[]');
-
       const stats = await getFeedbackStats('https://nonexistent.com');
 
       expect(stats.likes).toBe(0);
