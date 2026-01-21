@@ -3,16 +3,16 @@
 <div align="center">
 
 ![Arc Browser](https://img.shields.io/badge/Arc-Browser-blue?style=for-the-badge&logo=electron)
-![Version](https://img.shields.io/badge/version-1.2.0--stable-green?style=for-the-badge)
+![Version](https://img.shields.io/badge/version-1.3.0--mvp-green?style=for-the-badge)
 ![License](https://img.shields.io/badge/license-MIT-orange?style=for-the-badge)
 ![Tests](https://img.shields.io/badge/tests-310%2B%20passing-brightgreen?style=for-the-badge)
 ![Coverage](https://img.shields.io/badge/coverage-93.5%25-brightgreen?style=for-the-badge)
 
 **A modern, intelligent browser built with Electron, React, and TypeScript**
 
-*Featuring AI-powered recommendations through Jarvis assistant with local Ollama integration*
+*Featuring AI-powered recommendations, command palette, workspaces, and comprehensive onboarding*
 
-**✨ Latest Update**: Production-ready with enhanced stability, robust database operations, intelligent error handling, and comprehensive test coverage
+**✨ Latest Update**: MVP Enhancement Release - Command Palette, Enhanced Jarvis Page Analysis, Lightweight Workspaces, System Diagnostics, and First-Run Onboarding
 
 [Features](#-features) • [What's New](#-whats-new) • [Installation](#-installation) • [Development](#-development) • [Architecture](#-architecture) • [Contributing](#-contributing)
 
@@ -22,7 +22,55 @@
 
 ## ✨ Features
 
-### 🧠 **Jarvis AI Assistant**
+### ⌨️ **Command Palette (NEW)**
+- **Universal Access**: Press Ctrl+K (Cmd+K on Mac) to access any feature instantly
+- **Fuzzy Search**: Intelligent command matching with keyword support
+- **Keyboard Navigation**: Full keyboard control with arrow keys and Enter
+- **Comprehensive Commands**: Tab management, Jarvis actions, workspace operations, settings, and more
+- **Quick Actions**: Create tabs, analyze pages, switch workspaces, open diagnostics - all from one interface
+
+### 🧠 **Enhanced Jarvis AI Assistant**
+- **Smart Recommendations**: AI-powered suggestions based on your browsing history
+- **🆕 Page Analysis**: Analyze, summarize, or explain any webpage content with one click
+- **🆕 Content Extraction**: Intelligent extraction of page text (8000 character limit)
+- **🆕 Three Analysis Modes**: 
+  - 🔍 **Analyze Page**: Detailed content analysis and insights
+  - 📝 **Summarize Page**: Concise summary of key points
+  - 💡 **Explain Simply**: Easy-to-understand explanations
+- **Personalized Learning**: Adapts to your preferences with like/dislike feedback
+- **Contextual Discovery**: Finds relevant content you might have missed
+- **Chat Interface**: Interactive assistant for browsing help and suggestions
+- **🆕 Custom Personalization**: Fine-tune recommendation weights for recency, frequency, and feedback
+- **🆕 Ollama Integration**: Local AI-powered chat with llama3 for intelligent responses
+- **🆕 Graceful Fallback**: Automatic fallback to rule-based responses when AI unavailable
+- **🆕 Smart Error Handling**: Clear, actionable error messages with installation instructions
+
+### 📁 **Lightweight Workspaces (NEW)**
+- **Session Capture**: Save complete browsing sessions with all tabs and groups
+- **Quick Switching**: Switch between different projects or contexts instantly
+- **Workspace Management**: Create, rename, delete, and organize workspaces
+- **Persistent Storage**: Workspaces survive app restarts and system reboots
+- **Search & Filter**: Find workspaces by name, description, or tags
+- **Statistics**: View workspace usage and tab counts
+- **Command Integration**: Access all workspace features via command palette
+
+### 🔧 **System Diagnostics (NEW)**
+- **Health Monitoring**: Real-time system status for all components
+- **User-Friendly Display**: Clear status indicators with helpful error messages
+- **Component Status**: Monitor Ollama, database, session, Jarvis, and app health
+- **Troubleshooting**: Actionable guidance for resolving issues
+- **Performance Metrics**: System performance and resource usage information
+- **Command Access**: Open diagnostics instantly with `diagnostics:open` command
+
+### 👋 **First-Run Onboarding (NEW)**
+- **Guided Tour**: Interactive 3-step introduction to key features
+- **Feature Highlights**: Learn about Command Palette, Workspaces, and Jarvis Analysis
+- **Demo Workspace**: Optional demo workspace with curated development resources
+- **Skip Option**: Skip onboarding if you prefer to explore on your own
+- **One-Time Experience**: Onboarding only shows on first application launch
+- **Smart Detection**: Automatic first-run detection with persistent state
+
+### 🌟 **Modern Browser Experience**
 - **Smart Recommendations**: AI-powered suggestions based on your browsing history
 - **Personalized Learning**: Adapts to your preferences with like/dislike feedback
 - **Contextual Discovery**: Finds relevant content you might have missed
@@ -63,6 +111,52 @@
 ---
 
 ## 🆕 What's New
+
+### 🎯 MVP Enhancement Release (v1.3.0)
+
+Arc Browser introduces five major MVP features that transform the browsing experience:
+
+#### ⌨️ **Command Palette - Universal Access**
+- **Instant Access**: Press Ctrl+K/Cmd+K to access any feature without leaving the keyboard
+- **Smart Search**: Fuzzy matching finds commands even with partial typing
+- **Comprehensive Coverage**: 15+ commands covering tabs, Jarvis, workspaces, settings, and diagnostics
+- **Keyboard Navigation**: Full arrow key navigation with Enter to execute
+- **Categories**: Commands organized by functionality (tabs, jarvis, workspace, system)
+
+#### 🔍 **Enhanced Jarvis Page Analysis**
+- **One-Click Analysis**: Three dedicated buttons for instant page analysis
+- **Content Extraction**: Intelligent text extraction from any webpage (8000 char limit)
+- **Multiple Analysis Types**:
+  - **Analyze**: Comprehensive content analysis and insights
+  - **Summarize**: Concise key points and main ideas
+  - **Explain Simply**: Easy-to-understand explanations for complex content
+- **Chat Integration**: Analysis results appear directly in Jarvis chat interface
+- **Error Handling**: Graceful handling when no active tab or content unavailable
+
+#### 📁 **Lightweight Workspaces System**
+- **Complete Session Capture**: Save all tabs, groups, and scroll positions
+- **Instant Switching**: Switch between different projects or contexts in seconds
+- **Persistent Storage**: SQLite-based storage survives app restarts
+- **Workspace Management**: Full CRUD operations (create, read, update, delete)
+- **Search & Organization**: Find workspaces by name, description, or tags
+- **Statistics Dashboard**: View workspace usage, tab counts, and creation dates
+- **Command Integration**: All workspace operations accessible via command palette
+
+#### 🔧 **System Diagnostics Panel**
+- **Comprehensive Health Check**: Monitor Ollama, database, session, Jarvis, and app status
+- **User-Friendly Interface**: Clear status cards with color-coded indicators
+- **Actionable Guidance**: Specific instructions for resolving issues
+- **Real-Time Updates**: Live status monitoring with refresh capability
+- **Non-Technical Language**: Error messages designed for all users
+- **Performance Insights**: System resource usage and performance metrics
+
+#### 👋 **First-Run Onboarding Experience**
+- **Interactive Tutorial**: 3-step guided tour of key features
+- **Feature Discovery**: Learn Command Palette, Workspaces, and Jarvis Analysis
+- **Demo Workspace**: Optional workspace with curated development resources
+- **Progress Tracking**: Visual progress bar and step navigation
+- **Flexible Flow**: Skip, go back, or complete at your own pace
+- **One-Time Experience**: Smart detection ensures onboarding only shows once
 
 ### 🎯 Latest Stability & Quality Improvements (v1.2.0)
 
@@ -172,14 +266,19 @@ Arc Browser introduces major enhancements that transform the browsing experience
 - **Virtualized Lists**: Smooth performance with thousands of items
 
 ### 📊 **Project Statistics**
-- **Version**: 1.2.0 (Production Stable)
+- **Version**: 1.3.0 (MVP Enhancement Release)
 - **Total Tests**: 310+ passing (100% pass rate)
 - **Code Coverage**: 93.5%
-- **Features Completed**: 24+ major features across 7 enhancement areas
-- **UI Components**: Modern hamburger menu navigation system
+- **Features Completed**: 30+ major features across 5 MVP enhancement areas
+- **New Commands**: 15+ commands accessible via Ctrl+K/Cmd+K
+- **Workspaces**: Complete session management with SQLite persistence
+- **Page Analysis**: 3 AI-powered analysis modes with Ollama integration
+- **Diagnostics**: Real-time system health monitoring
+- **Onboarding**: Interactive 3-step first-run experience
+- **UI Components**: Modern glassmorphism design with command palette
 - **Accessibility**: WCAG 2.1 AA compliant with enhanced keyboard navigation
-- **Performance**: All benchmarks met (startup < 2s, search < 200ms)
-- **Database**: SQLite with full-text search and WAL mode
+- **Performance**: All benchmarks met (startup < 2s, search < 200ms, command palette < 50ms)
+- **Database**: SQLite with workspaces table and full-text search
 - **Build Status**: ✅ Clean builds with no errors or warnings
 - **Test Quality**: ✅ All tests passing with clean output and proper error handling
 
@@ -233,6 +332,36 @@ npm run dev
 
 **Note:** Jarvis will work without Ollama using rule-based responses. When Ollama is available, it automatically uses AI for more intelligent conversations.
 
+### First Launch Experience
+
+On your first launch, Arc Browser will guide you through the key features:
+
+1. **Welcome Tour**: Interactive 3-step introduction to Command Palette, Workspaces, and Jarvis Analysis
+2. **Demo Workspace**: Optional workspace with curated development resources
+3. **Feature Discovery**: Learn keyboard shortcuts and essential workflows
+
+### Key Features to Try Immediately
+
+#### ⌨️ **Command Palette** (Essential)
+```
+Press Ctrl+K (Cmd+K on Mac) and try:
+• "new tab" - Create a new browser tab
+• "analyze page" - Analyze current webpage content  
+• "save workspace" - Save your current session
+• "diagnostics" - Check system health
+```
+
+#### 🔍 **Page Analysis** (New)
+1. Navigate to any interesting webpage
+2. Look for analysis buttons in Jarvis panel: 🔍 📝 💡
+3. Click to get AI-powered insights, summaries, or explanations
+
+#### 📁 **Workspaces** (New)
+1. Open several tabs with different projects
+2. Press Ctrl+K → "save workspace" 
+3. Name your workspace (e.g., "React Project", "Research")
+4. Later: Ctrl+K → "switch workspace" to restore everything
+
 ### Building for Production
 
 ```bash
@@ -265,14 +394,18 @@ arc-browser/
 ├── 📁 src/
 │   ├── 📁 main/           # Electron main process
 │   │   ├── main.ts        # Application entry point
-│   │   ├── ipc.ts         # Inter-process communication
-│   │   └── preload.ts     # Preload scripts
+│   │   ├── ipc.ts         # Inter-process communication (with MVP handlers)
+│   │   └── preload.ts     # Preload scripts (with MVP API)
 │   ├── 📁 renderer/       # React frontend
 │   │   ├── 📁 components/ # UI components
-│   │   │   ├── HamburgerMenu.tsx # Modern navigation menu
-│   │   │   ├── BrowserShell.tsx  # Main browser interface
-│   │   │   ├── JarvisPanel.tsx   # AI assistant panel
-│   │   │   └── SettingsView.tsx  # Settings interface
+│   │   │   ├── HamburgerMenu.tsx     # Modern navigation menu
+│   │   │   ├── BrowserShell.tsx      # Main browser interface
+│   │   │   ├── JarvisPanel.tsx       # AI assistant panel (enhanced)
+│   │   │   ├── 🆕 CommandPalette.tsx # Universal command interface
+│   │   │   ├── 🆕 WorkspaceDialog.tsx # Workspace management UI
+│   │   │   ├── 🆕 DiagnosticsPanel.tsx # System health display
+│   │   │   ├── 🆕 OnboardingFlow.tsx  # First-run tutorial
+│   │   │   └── SettingsView.tsx      # Settings interface
 │   │   ├── 📁 contexts/   # React contexts
 │   │   ├── 📁 hooks/      # Custom hooks
 │   │   └── 📁 styles/     # CSS styles
@@ -282,13 +415,19 @@ arc-browser/
 │   │   ├── historyStore.ts# Browsing history management
 │   │   ├── feedbackStore.ts# User feedback storage
 │   │   ├── settingsStore.ts# Settings management (localStorage)
-│   │   ├── database.ts    # SQLite database manager
-│   │   ├── 🆕 sessionManager.ts    # Session save/restore
-│   │   ├── 🆕 tabGroupManager.ts   # Tab group management
-│   │   ├── 🆕 historySearchManager.ts # Advanced history search
-│   │   ├── 🆕 personalizationManager.ts # Recommendation personalization
-│   │   ├── 🆕 ollamaClient.ts      # Ollama AI integration
-│   │   └── 🆕 accessibilityAuditor.ts # Accessibility compliance
+│   │   ├── database.ts    # SQLite database manager (enhanced)
+│   │   ├── 🆕 commandRegistry.ts    # Command palette system
+│   │   ├── 🆕 defaultCommands.ts    # Built-in command definitions
+│   │   ├── 🆕 jarvisActions.ts      # Page analysis functionality
+│   │   ├── 🆕 workspaceManager.ts   # Workspace CRUD operations
+│   │   ├── 🆕 diagnosticsProvider.ts # System health monitoring
+│   │   ├── 🆕 onboardingManager.ts  # First-run experience
+│   │   ├── sessionManager.ts        # Session save/restore
+│   │   ├── tabGroupManager.ts       # Tab group management
+│   │   ├── historySearchManager.ts  # Advanced history search
+│   │   ├── personalizationManager.ts # Recommendation personalization
+│   │   ├── ollamaClient.ts          # Ollama AI integration
+│   │   └── accessibilityAuditor.ts  # Accessibility compliance
 │   └── 📁 test/           # Test suites
 │       ├── 📁 accessibility/ # Accessibility tests
 │       ├── 📁 performance/   # Performance benchmarks
@@ -312,6 +451,11 @@ arc-browser/
 
 ### 🤖 **Jarvis Panel**
 - **Recommendation Engine**: Analyzes browsing patterns for smart suggestions
+- **🆕 Page Analysis Actions**: Three dedicated buttons for instant content analysis
+  - 🔍 **Analyze Page**: Comprehensive analysis and insights
+  - 📝 **Summarize Page**: Concise summary of key points  
+  - 💡 **Explain Simply**: Easy-to-understand explanations
+- **🆕 Content Integration**: Analysis results appear directly in chat interface
 - **🆕 Personalization Controls**: Adjust recommendation weights for recency, frequency, and feedback
 - **Feedback System**: Learn from user preferences (👍/👎)
 - **Chat Interface**: Interactive assistant for browsing help
@@ -319,6 +463,38 @@ arc-browser/
 - **🆕 Smart Error Handling**: Clear error messages when AI models are missing
 - **🆕 Automatic Fallback**: Seamlessly switches between AI and rule-based responses
 - **Auto-refresh**: Updates recommendations based on navigation
+
+### ⌨️ **Command Palette**
+- **🆕 Universal Access**: Press Ctrl+K/Cmd+K to access any feature instantly
+- **🆕 Fuzzy Search**: Intelligent command matching with partial typing
+- **🆕 Keyboard Navigation**: Full arrow key control with Enter to execute
+- **🆕 Comprehensive Commands**: 15+ commands covering all major features
+- **🆕 Categories**: Organized by tabs, jarvis, workspace, system, and demo actions
+- **🆕 Quick Actions**: Create tabs, analyze pages, manage workspaces, open diagnostics
+
+### 📁 **Workspaces System**
+- **🆕 Session Capture**: Save complete browsing sessions with all tabs and groups
+- **🆕 Quick Switching**: Switch between different projects instantly via command palette
+- **🆕 Workspace Management**: Create, rename, delete, and organize workspaces
+- **🆕 Persistent Storage**: SQLite-based storage survives app restarts
+- **🆕 Search & Filter**: Find workspaces by name, description, or tags
+- **🆕 Statistics Dashboard**: View usage, tab counts, and creation dates
+- **🆕 Command Integration**: All operations accessible via Ctrl+K
+
+### 🔧 **System Diagnostics**
+- **🆕 Health Monitoring**: Real-time status for Ollama, database, session, Jarvis, and app
+- **🆕 User-Friendly Display**: Clear status cards with color-coded indicators
+- **🆕 Troubleshooting**: Actionable guidance for resolving issues
+- **🆕 Performance Metrics**: System resource usage and performance information
+- **🆕 Command Access**: Open instantly with `diagnostics:open` command
+
+### 👋 **Onboarding Experience**
+- **🆕 First-Run Detection**: Automatic detection of new installations
+- **🆕 Interactive Tutorial**: 3-step guided tour of key features
+- **🆕 Feature Discovery**: Learn Command Palette, Workspaces, and Jarvis Analysis
+- **🆕 Demo Workspace**: Optional workspace with curated development resources
+- **🆕 Progress Tracking**: Visual progress bar and flexible navigation
+- **🆕 One-Time Experience**: Smart state management ensures single showing
 
 ### 🔍 **History & Search**
 - **🆕 Advanced History Search**: Full-text search across browsing history
@@ -354,6 +530,37 @@ arc-browser/
 | `npm run test:performance` | Run performance benchmarks |
 | `npm run test:integration` | Run integration tests |
 | `npm run test:pbt` | Run property-based tests |
+
+### Key Features to Try
+
+After starting the development server, try these new MVP features:
+
+#### ⌨️ **Command Palette**
+1. Press `Ctrl+K` (or `Cmd+K` on Mac) anywhere in the app
+2. Type commands like "new tab", "analyze page", "save workspace"
+3. Use arrow keys to navigate and Enter to execute
+
+#### 🔍 **Page Analysis**
+1. Navigate to any webpage
+2. Look for the analysis buttons in the Jarvis panel: 🔍 Analyze, 📝 Summary, 💡 Explain
+3. Click any button to get AI-powered analysis of the page content
+
+#### 📁 **Workspaces**
+1. Open multiple tabs with different content
+2. Press `Ctrl+K` and type "save workspace" or use the hamburger menu
+3. Give your workspace a name and description
+4. Later, use "switch workspace" to restore your session
+
+#### 🔧 **System Diagnostics**
+1. Press `Ctrl+K` and type "diagnostics" to open the system health panel
+2. View the status of all system components
+3. Get actionable guidance for any issues
+
+#### 👋 **Onboarding (First Run)**
+1. Delete the `data/` folder to simulate first run
+2. Restart the application
+3. Follow the interactive 3-step tour
+4. Optionally create a demo workspace with development resources
 
 ### Development Features
 
@@ -435,7 +642,9 @@ Arc Browser uses a hybrid storage approach for optimal performance and privacy:
 - **📚 Browsing History**: URLs, titles, visit counts, and timestamps with full-text search indexing
 - **👥 Tab Groups**: Group definitions, colors, and tab associations with persistence
 - **💾 Session Data**: Tab states, scroll positions, and form data for session restoration
+- **🆕 Workspaces**: Complete workspace definitions with session snapshots and metadata
 - **⚙️ Settings**: User preferences and configuration options
+- **🆕 Onboarding State**: First-run detection and tutorial progress tracking
 
 ### 📁 **JSON Storage**
 - **💭 User Feedback**: Like/dislike preferences for recommendations
@@ -517,6 +726,9 @@ We welcome contributions! Here's how to get started:
 - Ensure accessibility compliance (WCAG 2.1 AA)
 - Meet performance benchmarks for new features
 - Include proper ARIA labels and keyboard navigation support
+- **Command Integration**: New features should be accessible via command palette
+- **Workspace Compatibility**: Ensure features work with workspace save/restore
+- **Onboarding Consideration**: Major features may need onboarding step updates
 
 ---
 
@@ -539,6 +751,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Built with ❤️ by the Arc Browser Team**
 
-[⭐ Star this repo](https://github.com/your-username/arc-browser) • [🐛 Report Bug](https://github.com/your-username/arc-browser/issues) • [💡 Request Feature](https://github.com/your-username/arc-browser/issues)
+[⭐ Star this repo](https://github.com/Emperor2004/arc) • [🐛 Report Bug](https://github.com/Emperor2004/arc/issues) • [💡 Request Feature](https://github.com/Emperor2004/arc/issues)
 
 </div>
