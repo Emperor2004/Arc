@@ -1,0 +1,144 @@
+{
+  "summary": {
+    "totalTests": 77,
+    "unitTests": 43,
+    "propertyBasedTests": 34,
+    "integrationTests": 3,
+    "performanceTests": 9,
+    "accessibilityTests": 3
+  },
+  "issues": {
+    "brokenImports": [
+      {
+        "file": "src/test/performance/LazyHistoryLoader.test.ts",
+        "import": "../../types/history",
+        "line": 3,
+        "severity": "error"
+      }
+    ],
+    "sqliteMisalignment": [
+      {
+        "file": "src/core/bookmarkStore.test.ts",
+        "issue": "Test uses localStorage directly for history/bookmarks/settings (should use SQLite stores)",
+        "severity": "warning"
+      },
+      {
+        "file": "src/core/settingsStore.test.ts",
+        "issue": "Test uses localStorage directly for history/bookmarks/settings (should use SQLite stores)",
+        "severity": "warning"
+      },
+      {
+        "file": "src/test/integration/personalizationCheckpoint.test.ts",
+        "issue": "Test validates persistence but uses localStorage-backed store instead of SQLite Main version",
+        "severity": "warning"
+      },
+      {
+        "file": "src/test/integration/personalizationIntegration.test.ts",
+        "issue": "Test validates persistence but uses localStorage-backed store instead of SQLite Main version",
+        "severity": "warning"
+      },
+      {
+        "file": "src/test/performance/StoreIntegration.test.ts",
+        "issue": "Test validates persistence but uses localStorage-backed store instead of SQLite Main version",
+        "severity": "warning"
+      }
+    ],
+    "mockIssues": [],
+    "environmentIssues": [],
+    "coverageGaps": [
+      {
+        "file": "src/core/database/ErrorHandling.pbt.test.ts",
+        "issue": "Property-based test missing requirement annotation or feature tag",
+        "severity": "warning"
+      },
+      {
+        "file": "src/core/database/GracefulDegradation.pbt.test.ts",
+        "issue": "Property-based test missing requirement annotation or feature tag",
+        "severity": "warning"
+      },
+      {
+        "file": "src/core/database/Lifecycle.pbt.test.ts",
+        "issue": "Property-based test missing requirement annotation or feature tag",
+        "severity": "warning"
+      },
+      {
+        "file": "src/core/database/MigrationManager.pbt.test.ts",
+        "issue": "Property-based test missing requirement annotation or feature tag",
+        "severity": "warning"
+      },
+      {
+        "file": "src/core/database/Performance.pbt.test.ts",
+        "issue": "Property-based test missing requirement annotation or feature tag",
+        "severity": "warning"
+      },
+      {
+        "file": "src/core/database/ProcessIsolation.pbt.test.ts",
+        "issue": "Property-based test missing requirement annotation or feature tag",
+        "severity": "warning"
+      },
+      {
+        "file": "src/core/database/Reconnection.pbt.test.ts",
+        "issue": "Property-based test missing requirement annotation or feature tag",
+        "severity": "warning"
+      },
+      {
+        "file": "src/core/database/TestUtilities.pbt.test.ts",
+        "issue": "Property-based test missing requirement annotation or feature tag",
+        "severity": "warning"
+      },
+      {
+        "file": "src/core/dataManager.pbt.test.ts",
+        "issue": "Property-based test missing requirement annotation or feature tag",
+        "severity": "warning"
+      },
+      {
+        "file": "src/core/historySearchManager.pbt.test.ts",
+        "issue": "Property-based test missing requirement annotation or feature tag",
+        "severity": "warning"
+      },
+      {
+        "file": "src/core/ollamaClient.pbt.test.ts",
+        "issue": "Property-based test missing requirement annotation or feature tag",
+        "severity": "warning"
+      },
+      {
+        "file": "src/core/personalizationManager.pbt.test.ts",
+        "issue": "Property-based test missing requirement annotation or feature tag",
+        "severity": "warning"
+      },
+      {
+        "file": "src/core/sessionManager.pbt.test.ts",
+        "issue": "Property-based test missing requirement annotation or feature tag",
+        "severity": "warning"
+      },
+      {
+        "file": "src/core/tabGroupManager.pbt.test.ts",
+        "issue": "Property-based test missing requirement annotation or feature tag",
+        "severity": "warning"
+      },
+      {
+        "file": "src/core/tabReorderManager.pbt.test.ts",
+        "issue": "Property-based test missing requirement annotation or feature tag",
+        "severity": "warning"
+      },
+      {
+        "file": "src/renderer/hooks/useTabsController.pbt.test.ts",
+        "issue": "Property-based test missing requirement annotation or feature tag",
+        "severity": "warning"
+      },
+      {
+        "file": "src/renderer/themeManager.pbt.test.ts",
+        "issue": "Property-based test missing requirement annotation or feature tag",
+        "severity": "warning"
+      }
+    ]
+  },
+  "statistics": {
+    "totalImports": 290,
+    "brokenImportsCount": 1,
+    "testsUsingLocalStorage": 3,
+    "testsUsingDatabaseManager": 12,
+    "testsWithMocks": 20,
+    "propertyTestsWithoutAnnotations": 17
+  }
+}

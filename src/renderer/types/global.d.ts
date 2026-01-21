@@ -37,6 +37,8 @@ export interface ArcAPI {
   pageLoaded: (data: PageLoadedPayload) => void;
   getJarvisRecommendations: (limit?: number) => Promise<Recommendation[]>;
   clearJarvisCache: () => Promise<{ ok: boolean }>;
+  jarvisChat: (messages: Array<{from: string; text: string}>) => Promise<any>;
+  getCurrentPageText: () => Promise<{ ok: boolean; text?: string; error?: string }>;
   getRecentHistory: (limit?: number) => Promise<HistoryEntry[]>;
   sendJarvisFeedback: (feedback: RecommendationFeedback) => Promise<{ ok: boolean }>;
   
@@ -67,6 +69,25 @@ export interface ArcAPI {
   getCookies: (filter?: { url?: string; domain?: string; name?: string }) => Promise<GetCookiesResult>;
   clearCookies: () => Promise<ClearCookiesResult>;
   clearCookiesForUrl: (url: string) => Promise<ClearCookiesResult>;
+
+  // Workspace management methods
+  listWorkspaces: () => Promise<{ ok: boolean; workspaces: any[]; error?: string }>;
+  saveWorkspace: (tabs: TabSession[], activeTabId: string, options: { name: string; description?: string; tags?: string[] }) => Promise<{ ok: boolean; workspaceId?: string; error?: string }>;
+  loadWorkspace: (workspaceId: string) => Promise<{ ok: boolean; sessionSnapshot: SessionState | null; error?: string }>;
+  deleteWorkspace: (workspaceId: string) => Promise<{ ok: boolean; error?: string }>;
+  updateWorkspace: (workspaceId: string, options: { name?: string; description?: string; tags?: string[] }) => Promise<{ ok: boolean; error?: string }>;
+  updateWorkspaceSession: (workspaceId: string, tabs: TabSession[], activeTabId: string) => Promise<{ ok: boolean; error?: string }>;
+  searchWorkspaces: (query: string) => Promise<{ ok: boolean; workspaces: any[]; error?: string }>;
+  getWorkspaceStats: () => Promise<{ ok: boolean; stats: any; error?: string }>;
+
+  // Diagnostics methods
+  getDiagnostics: () => Promise<{ ok: boolean; diagnostics: any; error?: string }>;
+
+  // Onboarding methods
+  isFirstRun: () => Promise<{ ok: boolean; isFirstRun: boolean; error?: string }>;
+  markOnboardingCompleted: () => Promise<{ ok: boolean; error?: string }>;
+  skipOnboarding: () => Promise<{ ok: boolean; error?: string }>;
+  createDemoWorkspace: () => Promise<{ ok: boolean; workspaceId: string | null; error?: string }>;
 
   // Keyboard shortcut methods
   newTab: () => void;

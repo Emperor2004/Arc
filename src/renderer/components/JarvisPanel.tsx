@@ -56,6 +56,23 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
         logAction('Jarvis panel initialized');
     }, [logAction]);
 
+    // Listen for Jarvis messages from command palette
+    useEffect(() => {
+        const handleJarvisMessage = (event: CustomEvent) => {
+            const { message } = event.detail;
+            if (message && jarvisController.addMessage) {
+                jarvisController.addMessage(message);
+                logAction('Jarvis message added from command palette');
+            }
+        };
+
+        window.addEventListener('arc:jarvis-message', handleJarvisMessage as EventListener);
+
+        return () => {
+            window.removeEventListener('arc:jarvis-message', handleJarvisMessage as EventListener);
+        };
+    }, [jarvisController, logAction]);
+
     // Refresh on trigger (debounced)
     useEffect(() => {
         if (!refreshTrigger) return;
@@ -353,6 +370,128 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                         </div>
                     ))
                 )}
+            </div>
+
+            {/* Page Analysis Actions */}
+            <div style={{
+                padding: '12px 0',
+                borderBottom: '1px solid var(--glass-border)'
+            }}
+            role="region"
+            aria-labelledby="analysis-heading">
+                <h3 id="analysis-heading" style={{ 
+                    margin: '0 0 8px 0', 
+                    fontSize: '14px', 
+                    fontWeight: 600,
+                    color: 'var(--text-primary)'
+                }}>
+                    Page Analysis
+                </h3>
+                <div style={{ 
+                    display: 'flex', 
+                    gap: '6px', 
+                    flexWrap: 'wrap' 
+                }} 
+                role="group" 
+                aria-label="Page analysis actions">
+                    <button
+                        className="btn-secondary"
+                        style={{
+                            flex: '1 1 auto',
+                            fontSize: '11px',
+                            padding: '6px 8px',
+                            minWidth: '70px'
+                        }}
+                        onClick={async () => {
+                            try {
+                                const { executeJarvisAction } = await import('../../core/jarvisActions');
+                                const result = await executeJarvisAction('analyze');
+                                
+                                // Add the analysis result to chat
+                                const analysisMessage = {
+                                    from: 'jarvis',
+                                    text: result
+                                };
+                                
+                                // Trigger the message display (we'll need to expose this from the controller)
+                                jarvisController.addMessage(analysisMessage);
+                                logAction('Page analysis completed');
+                            } catch (error) {
+                                console.error('Analysis error:', error);
+                                logAction(`Page analysis failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                            }
+                        }}
+                        disabled={status === 'thinking'}
+                        aria-label="Analyze current page content"
+                        title="Get a comprehensive analysis of the current page"
+                    >
+                        🔍 Analyze
+                    </button>
+                    <button
+                        className="btn-secondary"
+                        style={{
+                            flex: '1 1 auto',
+                            fontSize: '11px',
+                            padding: '6px 8px',
+                            minWidth: '70px'
+                        }}
+                        onClick={async () => {
+                            try {
+                                const { executeJarvisAction } = await import('../../core/jarvisActions');
+                                const result = await executeJarvisAction('summarize');
+                                
+                                // Add the summary result to chat
+                                const summaryMessage = {
+                                    from: 'jarvis',
+                                    text: result
+                                };
+                                
+                                jarvisController.addMessage(summaryMessage);
+                                logAction('Page summary completed');
+                            } catch (error) {
+                                console.error('Summary error:', error);
+                                logAction(`Page summary failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                            }
+                        }}
+                        disabled={status === 'thinking'}
+                        aria-label="Summarize current page content"
+                        title="Get a concise summary of the current page"
+                    >
+                        📝 Summary
+                    </button>
+                    <button
+                        className="btn-secondary"
+                        style={{
+                            flex: '1 1 auto',
+                            fontSize: '11px',
+                            padding: '6px 8px',
+                            minWidth: '70px'
+                        }}
+                        onClick={async () => {
+                            try {
+                                const { executeJarvisAction } = await import('../../core/jarvisActions');
+                                const result = await executeJarvisAction('explain');
+                                
+                                // Add the explanation result to chat
+                                const explanationMessage = {
+                                    from: 'jarvis',
+                                    text: result
+                                };
+                                
+                                jarvisController.addMessage(explanationMessage);
+                                logAction('Page explanation completed');
+                            } catch (error) {
+                                console.error('Explanation error:', error);
+                                logAction(`Page explanation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                            }
+                        }}
+                        disabled={status === 'thinking'}
+                        aria-label="Explain current page in simple terms"
+                        title="Get a simple explanation of the current page"
+                    >
+                        💡 Explain
+                    </button>
+                </div>
             </div>
 
             {/* Chat Area */}

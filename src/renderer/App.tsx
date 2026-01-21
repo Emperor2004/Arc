@@ -6,11 +6,16 @@ import DebugOverlay from './components/DebugOverlay';
 import KeyboardShortcutsHelp from './components/KeyboardShortcutsHelp';
 import HamburgerMenu from './components/HamburgerMenu';
 import SessionRestoreDialog from './components/SessionRestoreDialog';
+import CommandPalette from './components/CommandPalette';
+import WorkspaceDialog from './components/WorkspaceDialog';
+import DiagnosticsPanel from './components/DiagnosticsPanel';
+import OnboardingFlow from './components/OnboardingFlow';
 import { DebugProvider, useDebug } from './contexts/DebugContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { KeyboardShortcutManager, createDefaultShortcuts } from '../core/keyboardShortcutManager';
 import { getThemeManager } from '../core/themeManager';
 import { SessionState, TabSession } from '../core/sessionManager';
+import { initializeDefaultCommands } from '../core/defaultCommands';
 
 type LayoutMode = 'normal' | 'browser_max' | 'jarvis_max';
 type AppSection = 'browser' | 'settings';
@@ -135,6 +140,13 @@ const AppContent: React.FC = () => {
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [sessionToRestore, setSessionToRestore] = useState<SessionState | null>(null);
   const [restoreSessionChoice, setRestoreSessionChoice] = useState<'pending' | 'restored' | 'fresh' | null>(null);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [workspaceDialog, setWorkspaceDialog] = useState<{
+    isOpen: boolean;
+    mode: 'save' | 'switch' | 'delete' | null;
+  }>({ isOpen: false, mode: null });
+  const [isDiagnosticsPanelOpen, setIsDiagnosticsPanelOpen] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const jarvisRef = useRef<JarvisPanelHandle | null>(null);
   const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const shortcutManagerRef = useRef<KeyboardShortcutManager | null>(null);
@@ -150,6 +162,86 @@ const AppContent: React.FC = () => {
       // Cleanup is handled by singleton pattern
     };
   }, []);
+
+  // Check for first run and show onboarding
+  useEffect(() => {
+    const checkFirstRun = async () => {
+      try {
+        if (window.arc && window.arc.isFirstRun) {
+          const result = await window.arc.isFirstRun();
+          if (result.ok && result.isFirstRun) {
+            // Small delay to let the app initialize
+            setTimeout(() => {
+              setIsOnboardingOpen(true);
+              logAction('First run detected, showing onboarding');
+            }, 2000);
+          }
+        }
+      } catch (error) {
+        console.error('Error checking first run:', error);
+      }
+    };
+
+    checkFirstRun();
+  }, [logAction]);
+
+  // Initialize command registry
+  useEffect(() => {
+    initializeDefaultCommands();
+    logAction('Command registry initialized');
+
+    // Add event listeners for command-triggered actions
+    const handleNavigateToSection = (event: CustomEvent) => {
+      const { section: newSection } = event.detail;
+      setSection(newSection);
+      logAction(`Navigated to section: ${newSection}`);
+    };
+
+    const handleRestoreSession = (event: CustomEvent) => {
+      const { session } = event.detail;
+      if (session && session.tabs) {
+        setSessionToRestore(session);
+        setRestoreSessionChoice('pending');
+        logAction('Session restore triggered from command');
+      }
+    };
+
+    const handleWorkspaceSave = (event: CustomEvent) => {
+      setWorkspaceDialog({ isOpen: true, mode: 'save' });
+      logAction('Workspace save dialog opened');
+    };
+
+    const handleWorkspaceSwitch = (event: CustomEvent) => {
+      setWorkspaceDialog({ isOpen: true, mode: 'switch' });
+      logAction('Workspace switch dialog opened');
+    };
+
+    const handleWorkspaceDelete = (event: CustomEvent) => {
+      setWorkspaceDialog({ isOpen: true, mode: 'delete' });
+      logAction('Workspace delete dialog opened');
+    };
+
+    const handleDiagnosticsOpen = (event: CustomEvent) => {
+      setIsDiagnosticsPanelOpen(true);
+      logAction('Diagnostics panel opened');
+    };
+
+    window.addEventListener('arc:navigate-to-section', handleNavigateToSection as EventListener);
+    window.addEventListener('arc:restore-session', handleRestoreSession as EventListener);
+    window.addEventListener('arc:workspace-save', handleWorkspaceSave as EventListener);
+    window.addEventListener('arc:workspace-switch', handleWorkspaceSwitch as EventListener);
+    window.addEventListener('arc:workspace-delete', handleWorkspaceDelete as EventListener);
+    window.addEventListener('arc:diagnostics-open', handleDiagnosticsOpen as EventListener);
+
+    return () => {
+      window.removeEventListener('arc:navigate-to-section', handleNavigateToSection as EventListener);
+      window.removeEventListener('arc:restore-session', handleRestoreSession as EventListener);
+      window.removeEventListener('arc:workspace-save', handleWorkspaceSave as EventListener);
+      window.removeEventListener('arc:workspace-switch', handleWorkspaceSwitch as EventListener);
+      window.removeEventListener('arc:workspace-delete', handleWorkspaceDelete as EventListener);
+      window.removeEventListener('arc:diagnostics-open', handleDiagnosticsOpen as EventListener);
+    };
+  }, [logAction]);
 
   // Load and check for session restoration on mount
   useEffect(() => {
@@ -250,6 +342,14 @@ const AppContent: React.FC = () => {
 
     // Add global keyboard event listener
     const handleKeyDown = async (event: KeyboardEvent) => {
+      // Check for Ctrl+K or Cmd+K to open command palette
+      if ((event.ctrlKey || event.metaKey) && event.key === 'k' && !event.shiftKey && !event.altKey) {
+        event.preventDefault();
+        setIsCommandPaletteOpen(true);
+        logAction('Command palette opened via keyboard shortcut');
+        return;
+      }
+
       // Check for Ctrl+? or Cmd+? to show help
       if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key === '?') {
         event.preventDefault();
@@ -366,6 +466,72 @@ const AppContent: React.FC = () => {
     setRestoreSessionChoice(null);
   };
 
+  // Workspace dialog handlers
+  const handleWorkspaceDialogClose = () => {
+    setWorkspaceDialog({ isOpen: false, mode: null });
+  };
+
+  const handleWorkspaceSave = async (name: string, description?: string) => {
+    try {
+      // Get current tabs - this is a placeholder implementation
+      // In a real implementation, we'd get the actual tabs from BrowserShell
+      const mockTabs: TabSession[] = [
+        {
+          id: 'tab1',
+          url: 'https://example.com',
+          title: 'Example',
+          scrollPosition: { x: 0, y: 0 }
+        }
+      ];
+      
+      if (window.arc && window.arc.saveWorkspace) {
+        const result = await window.arc.saveWorkspace(mockTabs, 'tab1', { name, description });
+        if (result.ok) {
+          logAction(`Workspace saved: ${name}`);
+          // Show success message or notification
+        } else {
+          console.error('Failed to save workspace:', result.error);
+        }
+      }
+    } catch (error) {
+      console.error('Error saving workspace:', error);
+    }
+  };
+
+  const handleWorkspaceSwitch = async (workspaceId: string) => {
+    try {
+      if (window.arc && window.arc.loadWorkspace) {
+        const result = await window.arc.loadWorkspace(workspaceId);
+        if (result.ok && result.sessionSnapshot) {
+          // Restore the workspace session
+          if (window.arc.restoreSession) {
+            await window.arc.restoreSession(result.sessionSnapshot.tabs);
+            logAction(`Switched to workspace: ${workspaceId}`);
+          }
+        } else {
+          console.error('Failed to load workspace:', result.error);
+        }
+      }
+    } catch (error) {
+      console.error('Error switching workspace:', error);
+    }
+  };
+
+  const handleWorkspaceDelete = async (workspaceId: string) => {
+    try {
+      if (window.arc && window.arc.deleteWorkspace) {
+        const result = await window.arc.deleteWorkspace(workspaceId);
+        if (result.ok) {
+          logAction(`Workspace deleted: ${workspaceId}`);
+        } else {
+          console.error('Failed to delete workspace:', result.error);
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting workspace:', error);
+    }
+  };
+
   // Expose session restoration to window for BrowserShell to use
   React.useEffect(() => {
     (window as any).arcSessionRestore = {
@@ -445,6 +611,87 @@ const AppContent: React.FC = () => {
       >
         <SettingsView />
       </main>
+
+      {/* Command Palette */}
+      <CommandPalette 
+        isOpen={isCommandPaletteOpen}
+        onClose={() => {
+          setIsCommandPaletteOpen(false);
+          logAction('Command palette closed');
+        }}
+      />
+
+      {/* Workspace Dialog */}
+      <WorkspaceDialog
+        isOpen={workspaceDialog.isOpen}
+        mode={workspaceDialog.mode}
+        onClose={handleWorkspaceDialogClose}
+        onSave={handleWorkspaceSave}
+        onSwitch={handleWorkspaceSwitch}
+        onDelete={handleWorkspaceDelete}
+      />
+
+      {/* Diagnostics Panel */}
+      <DiagnosticsPanel
+        isOpen={isDiagnosticsPanelOpen}
+        onClose={() => {
+          setIsDiagnosticsPanelOpen(false);
+          logAction('Diagnostics panel closed');
+        }}
+      />
+
+      {/* Onboarding Flow */}
+      <OnboardingFlow
+        isOpen={isOnboardingOpen}
+        onComplete={async () => {
+          try {
+            if (window.arc && window.arc.markOnboardingCompleted) {
+              await window.arc.markOnboardingCompleted();
+            }
+            setIsOnboardingOpen(false);
+            logAction('Onboarding completed');
+          } catch (error) {
+            console.error('Error completing onboarding:', error);
+            setIsOnboardingOpen(false);
+          }
+        }}
+        onSkip={async () => {
+          try {
+            if (window.arc && window.arc.skipOnboarding) {
+              await window.arc.skipOnboarding();
+            }
+            setIsOnboardingOpen(false);
+            logAction('Onboarding skipped');
+          } catch (error) {
+            console.error('Error skipping onboarding:', error);
+            setIsOnboardingOpen(false);
+          }
+        }}
+        onCreateDemo={async () => {
+          try {
+            if (window.arc && window.arc.createDemoWorkspace) {
+              const result = await window.arc.createDemoWorkspace();
+              if (result.ok && result.workspaceId) {
+                logAction(`Demo workspace created: ${result.workspaceId}`);
+                // Optionally switch to the demo workspace
+                if (window.arc.loadWorkspace) {
+                  const loadResult = await window.arc.loadWorkspace(result.workspaceId);
+                  if (loadResult.ok && loadResult.sessionSnapshot) {
+                    if (window.arc.restoreSession) {
+                      await window.arc.restoreSession(loadResult.sessionSnapshot.tabs);
+                      logAction('Switched to demo workspace');
+                    }
+                  }
+                }
+              } else {
+                console.error('Failed to create demo workspace:', result.error);
+              }
+            }
+          } catch (error) {
+            console.error('Error creating demo workspace:', error);
+          }
+        }}
+      />
     </div>
   );
 }

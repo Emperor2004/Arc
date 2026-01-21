@@ -10,6 +10,7 @@ electron_1.contextBridge.exposeInMainWorld('arc', {
     getJarvisRecommendations: (limit) => electron_1.ipcRenderer.invoke('jarvis:getRecommendations', limit),
     clearJarvisCache: () => electron_1.ipcRenderer.invoke('jarvis:clearCache'),
     jarvisChat: (messages) => electron_1.ipcRenderer.invoke('jarvis:chat', messages),
+    getCurrentPageText: () => electron_1.ipcRenderer.invoke('arc:getCurrentPageText'),
     getRecentHistory: (limit) => electron_1.ipcRenderer.invoke('arc:getRecentHistory', limit),
     sendJarvisFeedback: (feedback) => electron_1.ipcRenderer.invoke('jarvis:sendFeedback', feedback),
     // Settings methods
@@ -44,6 +45,22 @@ electron_1.contextBridge.exposeInMainWorld('arc', {
     getCookies: (filter) => electron_1.ipcRenderer.invoke('arc:getCookies', filter),
     clearCookies: () => electron_1.ipcRenderer.invoke('arc:clearCookies'),
     clearCookiesForUrl: (url) => electron_1.ipcRenderer.invoke('arc:clearCookiesForUrl', url),
+    // Workspace management methods
+    listWorkspaces: () => electron_1.ipcRenderer.invoke('arc:listWorkspaces'),
+    saveWorkspace: (tabs, activeTabId, options) => electron_1.ipcRenderer.invoke('arc:saveWorkspace', tabs, activeTabId, options),
+    loadWorkspace: (workspaceId) => electron_1.ipcRenderer.invoke('arc:loadWorkspace', workspaceId),
+    deleteWorkspace: (workspaceId) => electron_1.ipcRenderer.invoke('arc:deleteWorkspace', workspaceId),
+    updateWorkspace: (workspaceId, options) => electron_1.ipcRenderer.invoke('arc:updateWorkspace', workspaceId, options),
+    updateWorkspaceSession: (workspaceId, tabs, activeTabId) => electron_1.ipcRenderer.invoke('arc:updateWorkspaceSession', workspaceId, tabs, activeTabId),
+    searchWorkspaces: (query) => electron_1.ipcRenderer.invoke('arc:searchWorkspaces', query),
+    getWorkspaceStats: () => electron_1.ipcRenderer.invoke('arc:getWorkspaceStats'),
+    // Diagnostics methods
+    getDiagnostics: () => electron_1.ipcRenderer.invoke('arc:getDiagnostics'),
+    // Onboarding methods
+    isFirstRun: () => electron_1.ipcRenderer.invoke('arc:isFirstRun'),
+    markOnboardingCompleted: () => electron_1.ipcRenderer.invoke('arc:markOnboardingCompleted'),
+    skipOnboarding: () => electron_1.ipcRenderer.invoke('arc:skipOnboarding'),
+    createDemoWorkspace: () => electron_1.ipcRenderer.invoke('arc:createDemoWorkspace'),
     // Keyboard shortcut methods
     newTab: () => electron_1.ipcRenderer.send('arc:newTab'),
     newIncognitoTab: () => electron_1.ipcRenderer.send('arc:newIncognitoTab'),

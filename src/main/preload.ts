@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('arc', {
     getJarvisRecommendations: (limit?: number) => ipcRenderer.invoke('jarvis:getRecommendations', limit),
     clearJarvisCache: () => ipcRenderer.invoke('jarvis:clearCache'),
     jarvisChat: (messages: Array<{from: string; text: string}>) => ipcRenderer.invoke('jarvis:chat', messages),
+    getCurrentPageText: () => ipcRenderer.invoke('arc:getCurrentPageText'),
     getRecentHistory: (limit?: number) => ipcRenderer.invoke('arc:getRecentHistory', limit),
     sendJarvisFeedback: (feedback: RecommendationFeedback) => ipcRenderer.invoke('jarvis:sendFeedback', feedback),
     
@@ -51,6 +52,25 @@ contextBridge.exposeInMainWorld('arc', {
     getCookies: (filter?: { url?: string; domain?: string; name?: string }) => ipcRenderer.invoke('arc:getCookies', filter),
     clearCookies: () => ipcRenderer.invoke('arc:clearCookies'),
     clearCookiesForUrl: (url: string) => ipcRenderer.invoke('arc:clearCookiesForUrl', url),
+
+    // Workspace management methods
+    listWorkspaces: () => ipcRenderer.invoke('arc:listWorkspaces'),
+    saveWorkspace: (tabs: TabSession[], activeTabId: string, options: { name: string; description?: string; tags?: string[] }) => ipcRenderer.invoke('arc:saveWorkspace', tabs, activeTabId, options),
+    loadWorkspace: (workspaceId: string) => ipcRenderer.invoke('arc:loadWorkspace', workspaceId),
+    deleteWorkspace: (workspaceId: string) => ipcRenderer.invoke('arc:deleteWorkspace', workspaceId),
+    updateWorkspace: (workspaceId: string, options: { name?: string; description?: string; tags?: string[] }) => ipcRenderer.invoke('arc:updateWorkspace', workspaceId, options),
+    updateWorkspaceSession: (workspaceId: string, tabs: TabSession[], activeTabId: string) => ipcRenderer.invoke('arc:updateWorkspaceSession', workspaceId, tabs, activeTabId),
+    searchWorkspaces: (query: string) => ipcRenderer.invoke('arc:searchWorkspaces', query),
+    getWorkspaceStats: () => ipcRenderer.invoke('arc:getWorkspaceStats'),
+
+    // Diagnostics methods
+    getDiagnostics: () => ipcRenderer.invoke('arc:getDiagnostics'),
+
+    // Onboarding methods
+    isFirstRun: () => ipcRenderer.invoke('arc:isFirstRun'),
+    markOnboardingCompleted: () => ipcRenderer.invoke('arc:markOnboardingCompleted'),
+    skipOnboarding: () => ipcRenderer.invoke('arc:skipOnboarding'),
+    createDemoWorkspace: () => ipcRenderer.invoke('arc:createDemoWorkspace'),
 
     // Keyboard shortcut methods
     newTab: () => ipcRenderer.send('arc:newTab'),

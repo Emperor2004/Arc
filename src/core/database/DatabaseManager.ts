@@ -326,6 +326,20 @@ export class DatabaseManager {
       )
     `);
 
+    // Create workspaces table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS workspaces (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        description TEXT,
+        createdAt INTEGER NOT NULL,
+        updatedAt INTEGER NOT NULL,
+        sessionSnapshot TEXT NOT NULL,
+        tags TEXT,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000)
+      )
+    `);
+
     // Create indices for performance
     this.db.exec(`
       CREATE INDEX IF NOT EXISTS idx_sessions_timestamp ON sessions(timestamp DESC);
@@ -334,6 +348,8 @@ export class DatabaseManager {
       CREATE INDEX IF NOT EXISTS idx_history_visited_at ON history(visited_at DESC);
       CREATE INDEX IF NOT EXISTS idx_bookmarks_url ON bookmarks(url);
       CREATE INDEX IF NOT EXISTS idx_bookmarks_createdAt ON bookmarks(createdAt DESC);
+      CREATE INDEX IF NOT EXISTS idx_workspaces_name ON workspaces(name);
+      CREATE INDEX IF NOT EXISTS idx_workspaces_updatedAt ON workspaces(updatedAt DESC);
     `);
 
     // Create full-text search virtual table for history

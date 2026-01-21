@@ -562,6 +562,221 @@ export const setupIpc = (mainWindow: BrowserWindow) => {
         }
     });
 
+    // Page content extraction handler
+    ipcMain.handle('arc:getCurrentPageText', async (event) => {
+        try {
+            console.log('📄 [IPC] arc:getCurrentPageText called');
+            
+            // Get the sender's webContents (the renderer that sent the message)
+            const senderWebContents = event.sender;
+            
+            // Find the BrowserWindow that contains this webContents
+            const window = BrowserWindow.fromWebContents(senderWebContents);
+            
+            if (!window) {
+                console.error('❌ Could not find window for page content extraction');
+                return { ok: false, error: 'No active window found' };
+            }
+            
+            // Execute JavaScript in the renderer to get the active webview content
+            const result = await window.webContents.executeJavaScript(`
+                (function() {
+                    try {
+                        // Find the active webview element
+                        const webview = document.querySelector('webview');
+                        if (!webview) {
+                            return { ok: false, error: 'No active webview found' };
+                        }
+                        
+                        // Execute JavaScript in the webview to get page content
+                        return new Promise((resolve) => {
+                            try {
+                                webview.executeJavaScript(\`
+                                    (function() {
+                                        try {
+                                            const text = document.body ? document.body.innerText : '';
+                                            return text.slice(0, 8000); // Limit to 8000 characters
+                                        } catch (e) {
+                                            return '';
+                                        }
+                                    })()
+                                \`).then((text) => {
+                                    resolve({ ok: true, text: text || '' });
+                                }).catch((error) => {
+                                    resolve({ ok: false, error: 'Failed to extract page content: ' + error.message });
+                                });
+                            } catch (error) {
+                                resolve({ ok: false, error: 'Failed to execute script in webview: ' + error.message });
+                            }
+                        });
+                    } catch (error) {
+                        return { ok: false, error: 'Failed to access webview: ' + error.message };
+                    }
+                })()
+            `);
+            
+            console.log('📄 [IPC] Page content extraction result:', {
+                ok: result.ok,
+                textLength: result.text ? result.text.length : 0,
+                error: result.error
+            });
+            
+            return result;
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:getCurrentPageText:', err);
+            return { 
+                ok: false, 
+                error: err instanceof Error ? err.message : 'Unknown error' 
+            };
+        }
+    });
+
+    // Workspace management handlers
+    ipcMain.handle('arc:listWorkspaces', async () => {
+        try {
+            const { listWorkspaces } = await import('../core/workspaceManager');
+            const workspaces = await listWorkspaces();
+            return { ok: true, workspaces };
+        } catch (err) {
+            console.error('Error in arc:listWorkspaces handler:', err);
+            return { ok: false, workspaces: [], error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+
+    ipcMain.handle('arc:saveWorkspace', async (_event, tabs: TabSession[], activeTabId: string, options: { name: string; description?: string; tags?: string[] }) => {
+        try {
+            const { saveWorkspaceFromCurrentSession } = await import('../core/workspaceManager');
+            const workspaceId = await saveWorkspaceFromCurrentSession(tabs, activeTabId, options);
+            return { ok: true, workspaceId };
+        } catch (err) {
+            console.error('Error in arc:saveWorkspace handler:', err);
+            return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+
+    ipcMain.handle('arc:loadWorkspace', async (_event, workspaceId: string) => {
+        try {
+            const { loadWorkspace } = await import('../core/workspaceManager');
+            const sessionSnapshot = await loadWorkspace(workspaceId);
+            return { ok: true, sessionSnapshot };
+        } catch (err) {
+            console.error('Error in arc:loadWorkspace handler:', err);
+            return { ok: false, sessionSnapshot: null, error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+
+    ipcMain.handle('arc:deleteWorkspace', async (_event, workspaceId: string) => {
+        try {
+            const { deleteWorkspace } = await import('../core/workspaceManager');
+            const success = await deleteWorkspace(workspaceId);
+            return { ok: success };
+        } catch (err) {
+            console.error('Error in arc:deleteWorkspace handler:', err);
+            return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+
+    ipcMain.handle('arc:updateWorkspace', async (_event, workspaceId: string, options: { name?: string; description?: string; tags?: string[] }) => {
+        try {
+            const { updateWorkspace } = await import('../core/workspaceManager');
+            const success = await updateWorkspace(workspaceId, options);
+            return { ok: success };
+        } catch (err) {
+            console.error('Error in arc:updateWorkspace handler:', err);
+            return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+
+    ipcMain.handle('arc:updateWorkspaceSession', async (_event, workspaceId: string, tabs: TabSession[], activeTabId: string) => {
+        try {
+            const { updateWorkspaceSession } = await import('../core/workspaceManager');
+            const success = await updateWorkspaceSession(workspaceId, tabs, activeTabId);
+            return { ok: success };
+        } catch (err) {
+            console.error('Error in arc:updateWorkspaceSession handler:', err);
+            return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+
+    ipcMain.handle('arc:searchWorkspaces', async (_event, query: string) => {
+        try {
+            const { searchWorkspaces } = await import('../core/workspaceManager');
+            const workspaces = await searchWorkspaces(query);
+            return { ok: true, workspaces };
+        } catch (err) {
+            console.error('Error in arc:searchWorkspaces handler:', err);
+            return { ok: false, workspaces: [], error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+
+    ipcMain.handle('arc:getWorkspaceStats', async () => {
+        try {
+            const { getWorkspaceStats } = await import('../core/workspaceManager');
+            const stats = await getWorkspaceStats();
+            return { ok: true, stats };
+        } catch (err) {
+            console.error('Error in arc:getWorkspaceStats handler:', err);
+            return { ok: false, stats: null, error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+
+    // Diagnostics handler
+    ipcMain.handle('arc:getDiagnostics', async () => {
+        try {
+            const { getDiagnosticsSnapshot } = await import('../core/diagnosticsProvider');
+            const diagnostics = await getDiagnosticsSnapshot();
+            return { ok: true, diagnostics };
+        } catch (err) {
+            console.error('Error in arc:getDiagnostics handler:', err);
+            return { ok: false, diagnostics: null, error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+
+    // Onboarding handlers
+    ipcMain.handle('arc:isFirstRun', async () => {
+        try {
+            const { isFirstRun } = await import('../core/onboardingManager');
+            const firstRun = await isFirstRun();
+            return { ok: true, isFirstRun: firstRun };
+        } catch (err) {
+            console.error('Error in arc:isFirstRun handler:', err);
+            return { ok: false, isFirstRun: true, error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+
+    ipcMain.handle('arc:markOnboardingCompleted', async () => {
+        try {
+            const { markOnboardingCompleted } = await import('../core/onboardingManager');
+            await markOnboardingCompleted();
+            return { ok: true };
+        } catch (err) {
+            console.error('Error in arc:markOnboardingCompleted handler:', err);
+            return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+
+    ipcMain.handle('arc:skipOnboarding', async () => {
+        try {
+            const { skipOnboarding } = await import('../core/onboardingManager');
+            await skipOnboarding();
+            return { ok: true };
+        } catch (err) {
+            console.error('Error in arc:skipOnboarding handler:', err);
+            return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+
+    ipcMain.handle('arc:createDemoWorkspace', async () => {
+        try {
+            const { createDemoWorkspace } = await import('../core/onboardingManager');
+            const workspaceId = await createDemoWorkspace();
+            return { ok: true, workspaceId };
+        } catch (err) {
+            console.error('Error in arc:createDemoWorkspace handler:', err);
+            return { ok: false, workspaceId: null, error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+
     // Cookie management handlers
     ipcMain.handle('arc:getCookies', async (_event, filter?: GetCookiesFilter) => {
         try {

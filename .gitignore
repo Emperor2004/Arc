@@ -102,8 +102,5 @@ SESSION_*.md
 JARVIS_*.md
 TEST_*.md
 
-# Kiro
-.kiro/
-
 # data
 data/

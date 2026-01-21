@@ -22,6 +22,7 @@ export interface JarvisController {
     handleKeyDown: (e: React.KeyboardEvent) => void;
     handleFeedback: (rec: Recommendation, value: FeedbackValue) => Promise<void>;
     handleOpen: (url: string) => void;
+    addMessage: (message: Message) => void;
 }
 
 // Local helper for "smart" replies (fallback when Ollama is disabled)
@@ -257,6 +258,11 @@ export const useJarvisController = (onNavigate?: (url: string) => void): JarvisC
         }
     }, [messages]);
 
+    // Add message to chat (for external use like page analysis)
+    const addMessage = (message: Message) => {
+        setMessages(prev => [...prev, message]);
+    };
+
     return {
         recommendations,
         status,
@@ -270,6 +276,7 @@ export const useJarvisController = (onNavigate?: (url: string) => void): JarvisC
         handleInputChange,
         handleKeyDown,
         handleFeedback,
-        handleOpen
+        handleOpen,
+        addMessage
     };
 };
