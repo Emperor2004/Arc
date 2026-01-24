@@ -48,7 +48,7 @@ export class StoreIntegration {
 
     try {
       // Add to original store
-      const bookmark = bookmarkStore.addBookmark(url, title, tags);
+      const bookmark = await bookmarkStore.addBookmark(url, title, tags);
 
       // Add to optimized store
       this.optimizedBookmarkStore.addBookmark({

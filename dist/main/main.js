@@ -4,6 +4,8 @@ const electron_1 = require("electron");
 const path_1 = require("path");
 const ipc_1 = require("./ipc");
 const DatabaseManager_1 = require("../core/database/DatabaseManager");
+const MigrationManager_1 = require("../core/database/MigrationManager");
+const migrations_1 = require("../core/database/migrations");
 let mainWindow = null;
 // Initialize database on app start
 async function initializeDatabase() {
@@ -12,6 +14,25 @@ async function initializeDatabase() {
         console.log('Database path:', DatabaseManager_1.DEFAULT_CONFIG.path);
         const dbManager = DatabaseManager_1.DatabaseManager.getInstance(DatabaseManager_1.DEFAULT_CONFIG);
         await dbManager.initialize();
+        // Run migrations
+        console.log('Running database migrations...');
+        const migrationManager = new MigrationManager_1.MigrationManager(dbManager);
+        // Register all migrations
+        for (const migration of migrations_1.migrations) {
+            migrationManager.registerMigration(migration);
+        }
+        // Apply pending migrations
+        const migrationResult = await migrationManager.migrate(DatabaseManager_1.DEFAULT_CONFIG.path);
+        if (migrationResult.applied > 0) {
+            console.log(`✅ Applied ${migrationResult.applied} database migrations`);
+        }
+        else {
+            console.log('✅ No pending migrations');
+        }
+        if (migrationResult.failed) {
+            console.error('❌ Migration failed:', migrationResult.failed);
+            throw new Error(`Migration ${migrationResult.failed.version} failed`);
+        }
         console.log('✅ Database initialized successfully');
         console.log('Database ready:', dbManager.isReady());
         return dbManager;

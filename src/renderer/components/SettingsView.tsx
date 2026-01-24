@@ -343,6 +343,149 @@ const SettingsView: React.FC<SettingsViewProps> = () => {
                     </div>
                 </div>
 
+                {/* Preloading Section */}
+                <div className="settings-card" role="region" aria-labelledby="preloading-heading">
+                    <div className="settings-group">
+                        <h2 id="preloading-heading">Preloading</h2>
+                        <p>Speed up browsing by preloading predicted pages</p>
+                        
+                        <div className="settings-item">
+                            <label className="settings-label">
+                                <div className="settings-label-content">
+                                    <span>Enable Preloading</span>
+                                    <span className="settings-description">
+                                        Preload connections to pages you're likely to visit for faster loading
+                                    </span>
+                                </div>
+                                <div className="settings-toggle">
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.preloadingEnabled ?? false}
+                                        onChange={async (e) => {
+                                            if (e.target.checked && !settings.preloadingConsent) {
+                                                // Request consent first
+                                                const consent = confirm(
+                                                    'Arc can preload pages you\'re likely to visit to make browsing faster. ' +
+                                                    'This uses a small amount of bandwidth to establish connections. ' +
+                                                    'Would you like to enable this feature?'
+                                                );
+                                                if (consent) {
+                                                    await handleUpdateSetting('preloadingConsent', true);
+                                                    await handleUpdateSetting('preloadingEnabled', true);
+                                                }
+                                            } else {
+                                                await handleUpdateSetting('preloadingEnabled', e.target.checked);
+                                            }
+                                        }}
+                                        className="settings-checkbox"
+                                        id="preloading-enabled-toggle"
+                                        aria-describedby="preloading-enabled-desc"
+                                    />
+                                    <span className="settings-toggle-slider" aria-hidden="true"></span>
+                                </div>
+                            </label>
+                            <div id="preloading-enabled-desc" className="sr-only">
+                                When enabled, Arc will preload connections to pages you're likely to visit based on AI predictions
+                            </div>
+                        </div>
+
+                        <div className="settings-item">
+                            <label className="settings-label">
+                                <div className="settings-label-content">
+                                    <span>WiFi Only</span>
+                                    <span className="settings-description">
+                                        Only preload when connected to WiFi to save mobile data
+                                    </span>
+                                </div>
+                                <div className="settings-toggle">
+                                    <input
+                                        type="checkbox"
+                                        checked={settings.preloadingOnlyOnWifi ?? true}
+                                        onChange={(e) => handleUpdateSetting('preloadingOnlyOnWifi', e.target.checked)}
+                                        className="settings-checkbox"
+                                        disabled={!settings.preloadingEnabled}
+                                        id="preloading-wifi-toggle"
+                                        aria-describedby="preloading-wifi-desc"
+                                    />
+                                    <span className="settings-toggle-slider" aria-hidden="true"></span>
+                                </div>
+                            </label>
+                            <div id="preloading-wifi-desc" className="sr-only">
+                                When enabled, preloading will only occur when connected to WiFi networks
+                            </div>
+                        </div>
+
+                        <div className="settings-item">
+                            <div className="settings-label-content">
+                                <span>Maximum Connections</span>
+                                <span className="settings-description">
+                                    Maximum number of connections to preload simultaneously (1-5)
+                                </span>
+                            </div>
+                            <div style={{ marginTop: '8px' }}>
+                                <input
+                                    type="range"
+                                    min="1"
+                                    max="5"
+                                    value={settings.preloadingMaxConnections ?? 3}
+                                    onChange={(e) => handleUpdateSetting('preloadingMaxConnections', parseInt(e.target.value))}
+                                    disabled={!settings.preloadingEnabled}
+                                    style={{
+                                        width: '100%',
+                                        marginBottom: '8px'
+                                    }}
+                                    aria-label="Maximum preloading connections"
+                                />
+                                <div style={{ 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between',
+                                    fontSize: '12px',
+                                    color: 'var(--text-secondary)'
+                                }}>
+                                    <span>1</span>
+                                    <span>Current: {settings.preloadingMaxConnections ?? 3}</span>
+                                    <span>5</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="settings-item">
+                            <div className="settings-label-content">
+                                <span>Prediction Confidence</span>
+                                <span className="settings-description">
+                                    Minimum confidence required for preloading (higher = fewer but more accurate predictions)
+                                </span>
+                            </div>
+                            <div style={{ marginTop: '8px' }}>
+                                <input
+                                    type="range"
+                                    min="0.1"
+                                    max="0.8"
+                                    step="0.1"
+                                    value={settings.preloadingMinConfidence ?? 0.3}
+                                    onChange={(e) => handleUpdateSetting('preloadingMinConfidence', parseFloat(e.target.value))}
+                                    disabled={!settings.preloadingEnabled}
+                                    style={{
+                                        width: '100%',
+                                        marginBottom: '8px'
+                                    }}
+                                    aria-label="Minimum prediction confidence"
+                                />
+                                <div style={{ 
+                                    display: 'flex', 
+                                    justifyContent: 'space-between',
+                                    fontSize: '12px',
+                                    color: 'var(--text-secondary)'
+                                }}>
+                                    <span>Low (10%)</span>
+                                    <span>Current: {Math.round((settings.preloadingMinConfidence ?? 0.3) * 100)}%</span>
+                                    <span>High (80%)</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Personalization Section */}
                 <PersonalizationSettings onMessage={showMessage} />
 

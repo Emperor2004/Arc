@@ -317,6 +317,20 @@ export class DatabaseManager {
       )
     `);
 
+    // Create bookmark_folders table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS bookmark_folders (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        createdAt INTEGER NOT NULL,
+        color TEXT DEFAULT 'blue',
+        description TEXT,
+        smart INTEGER DEFAULT 0,
+        rule TEXT,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000)
+      )
+    `);
+
     // Create settings table
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS settings (
@@ -348,6 +362,7 @@ export class DatabaseManager {
       CREATE INDEX IF NOT EXISTS idx_history_visited_at ON history(visited_at DESC);
       CREATE INDEX IF NOT EXISTS idx_bookmarks_url ON bookmarks(url);
       CREATE INDEX IF NOT EXISTS idx_bookmarks_createdAt ON bookmarks(createdAt DESC);
+      CREATE INDEX IF NOT EXISTS idx_bookmark_folders_name ON bookmark_folders(name);
       CREATE INDEX IF NOT EXISTS idx_workspaces_name ON workspaces(name);
       CREATE INDEX IF NOT EXISTS idx_workspaces_updatedAt ON workspaces(updatedAt DESC);
     `);

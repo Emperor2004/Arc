@@ -20,13 +20,30 @@ export type CommandId =
   | 'workspace:list'
   | 'workspace:delete'
   | 'diagnostics:open'
-  | 'demo:open-workspace';
+  | 'demo:open-workspace'
+  | 'bookmark:add'
+  | 'bookmark:organize'
+  | 'bookmark:search'
+  | 'bookmark:open-panel'
+  | 'bookmark:remove-current'
+  | 'reading-list:add-current'
+  | 'reading-list:add-current-with-summary'
+  | 'reading-list:open-panel'
+  | 'reading-list:search'
+  | 'translation:detect-language'
+  | 'translation:translate-to-english'
+  | 'translation:translate-to-spanish'
+  | 'translation:open-panel'
+  | 'translation:clear-cache'
+  | 'voice:toggle-listening'
+  | 'voice:show-help'
+  | 'voice:clear-cache';
 
 export interface Command {
   id: CommandId;
   title: string;
   description?: string;
-  category: 'tab' | 'jarvis' | 'workspace' | 'system';
+  category: 'tab' | 'jarvis' | 'workspace' | 'system' | 'bookmark' | 'reading-list' | 'translation' | 'voice';
   keywords?: string[];
   run(): void | Promise<void>;
 }

@@ -338,6 +338,228 @@ This implementation plan breaks down the Arc Browser MVP enhancements into discr
   - Onboarding guides new users through key features
   - All features integrate seamlessly with existing architecture
 
+## Session 2025-01-23 – AI & Intelligence Enhancements
+
+### Phase 6: Project Setup and Build Verification
+
+- [x] 32. Build project and fix issues
+  - Run `npm run build` to verify current state
+  - Fix any TypeScript errors or build warnings
+  - Ensure all existing tests pass with `npm test`
+  - Document any breaking changes or dependencies
+
+### Phase 7: Smart Bookmarking System
+
+- [x] 33. Create bookmark data model and storage
+  - Implement `Bookmark` interface: `{ id, url, title, createdAt, tags?, folderId?, favicon? }`
+  - Implement `BookmarkFolder` interface: `{ id, name, createdAt, smart?, rule?, color? }`
+  - Create `core/bookmarkStore.ts` with SQLite tables or JSON storage at `data/bookmarks.json`
+  - Add basic CRUD APIs: `addBookmark`, `listBookmarks`, `listFolders`, `assignFolder`, `deleteBookmark`
+  - _Reuses: database.ts patterns, settingsStore.ts structure_
+
+- [x] 34. Implement AI-powered bookmark organization
+  - Create `core/bookmarkAI.ts` for intelligent bookmark categorization
+  - Implement `suggestFoldersForBookmarks(bookmarks)` using ollamaClient
+  - Create prompts for folder suggestion and bookmark classification
+  - Add caching mechanism for AI suggestions to avoid repeated API calls
+  - Handle Ollama unavailable scenarios with fallback heuristics
+  - _Reuses: ollamaClient.ts, personalizationManager.ts patterns_
+
+- [x] 35. Build smart folder views and UI
+  - Create `BookmarksPanel.tsx` component with glassmorphism styling
+  - Add "Add bookmark" button for current tab
+  - Implement "Smart organize" button that runs AI categorization
+  - Create smart folder views: Work, Learning, News, Shopping, etc.
+  - Add bookmark search and filtering capabilities
+  - Integrate with existing command palette for bookmark commands
+  - _Reuses: existing panel patterns, glassmorphism styles_
+
+- [x] 36. Add bookmark commands to CommandRegistry
+  - Register `bookmark:add`, `bookmark:organize`, `bookmark:search` commands
+  - Add `bookmark:open-panel` command for quick access
+  - Wire commands to bookmark store operations
+  - Add keyboard shortcuts for common bookmark actions
+  - _Reuses: commandRegistry.ts, defaultCommands.ts patterns_
+
+### Phase 8: Content Summarization & Reading Lists
+
+- [x] 37. Enhance page content extraction
+  - Extend existing `arc:getCurrentPageText` IPC handler
+  - Create `core/pageContent.ts` utility for text extraction and cleaning
+  - Add content preprocessing: remove ads, navigation, extract main content
+  - Implement content caching to avoid repeated extraction
+  - Add metadata extraction: reading time, word count, language detection
+  - _Reuses: existing IPC patterns, jarvisActions.ts content extraction_
+
+- [x] 38. Build summarization pipeline
+  - Create `core/summarization.ts` with multiple summary types
+  - Implement `summarizePage(text, options)` using ollamaClient
+  - Add summary types: short (1-2 sentences), bullet points, key insights
+  - Include estimated reading time and topic classification
+  - Add summary quality scoring and fallback options
+  - _Reuses: ollamaClient.ts, jarvisActions.ts prompt patterns_
+
+- [x] 39. Implement reading list storage and management
+  - Create `core/readingListStore.ts` with `ReadingItem` interface
+  - Add `ReadingItem`: `{ id, url, title, savedAt, summary?, tags?, readingTime?, progress? }`
+  - Implement CRUD operations: save, list, update, delete, mark as read
+  - Add auto-summarization option when saving articles
+  - Create reading progress tracking and statistics
+  - _Reuses: database.ts patterns, workspaceManager.ts storage_
+
+- [x] 40. Build reading list UI components
+  - Create `ReadingListPanel.tsx` with article cards and summaries
+  - Add "Save to reading list" button in BrowserShell and JarvisPanel
+  - Implement reading list filters: unread, by topic, by date
+  - Add "Open & re-summarize" action for saved articles
+  - Create reading progress indicators and statistics view
+  - _Reuses: existing panel patterns, glassmorphism styling_
+
+### Phase 9: Translation Services
+
+- [x] 41. Create translation core system
+  - Implement `core/translation.ts` with language detection and translation
+  - Add `detectLanguage(text)` using LLM or heuristic methods
+  - Implement `translateText(text, targetLang)` via ollamaClient
+  - Create translation caching to avoid repeated API calls
+  - Add support for common language pairs and auto-detection
+  - _Reuses: ollamaClient.ts, pageContent.ts for text extraction_
+
+- [x] 42. Build translation UI and integration
+  - Add "Translate page" button in BrowserShell or language control
+  - Create translation side panel showing original and translated text
+  - Implement per-paragraph translation for selected text (optional)
+  - Store last used translation language in settingsStore
+  - Add translation quality indicators and retry options
+  - _Reuses: existing panel patterns, settingsStore.ts_
+
+- [x] 43. Integrate translation with Jarvis
+  - Add Jarvis quick actions: "Translate this page to [language]"
+  - Create translation commands for command palette
+  - Add translation to page analysis workflow
+  - Implement voice-activated translation commands
+  - _Reuses: jarvisActions.ts, commandRegistry.ts patterns_
+
+### Phase 10: Voice Commands System
+
+- [x] 44. Implement audio capture and speech recognition
+  - Create `VoiceController.tsx` component with Web Speech API
+  - Add microphone permission handling and audio capture
+  - Implement speech-to-text using webkitSpeechRecognition (MVP)
+  - Add voice activity detection and noise filtering
+  - Maintain Electron security (contextIsolation, sandbox)
+  - _Reuses: existing component patterns, security practices_
+
+- [x] 45. Build voice command processing pipeline
+  - Create `core/voiceCommands.ts` for intent parsing and execution
+  - Implement rule-based + LLM intent classification
+  - Map voice commands to actions: tabs, navigation, Jarvis, bookmarks
+  - Add command confidence scoring and disambiguation
+  - Create fallback handling for unrecognized commands
+  - _Reuses: ollamaClient.ts, commandRegistry.ts, jarvisActions.ts_
+
+- [x] 46. Create voice feedback UI and integration
+  - Add floating microphone button in BrowserShell
+  - Implement voice states: idle, listening, processing, error
+  - Show recognized command text and execution feedback
+  - Add voice command help and training mode
+  - Create voice shortcuts for common actions
+  - _Reuses: existing UI patterns, glassmorphism styling_
+
+### Phase 11: Predictive Navigation System
+
+- [x] 47. Enhance history and personalization data
+  - Extend historyStore to include visit patterns and context
+  - Add features: visit count, recency, time-of-day patterns, referrers
+  - Create user behavior analysis: browsing sessions, topic interests
+  - Implement privacy-safe feature extraction and storage
+  - Add data cleanup and retention policies
+  - _Reuses: historyStore.ts, personalizationManager.ts_
+
+- [x] 48. Build predictive navigation engine
+  - Create `core/predictiveNavigation.ts` with ML-lite ranking model
+  - Implement URL prediction based on current context and history
+  - Add prediction types: top sites, next likely page, personalized shortcuts
+  - Create prediction confidence scoring and filtering
+  - Add real-time prediction updates based on user behavior
+  - _Reuses: personalizationManager.ts, historyStore.ts patterns_
+
+- [x] 49. Integrate predictions with address bar
+  - Enhance existing address bar component with AI suggestions
+  - Merge history search results with predictive suggestions
+  - Add visual labels for AI suggestions ("Suggested", "Popular")
+  - Implement prediction ranking and relevance scoring
+  - Add user feedback mechanism for prediction quality
+  - _Reuses: existing address bar component, search patterns_
+
+- [x] 50. Implement safe preloading system
+  - Add connection preloading for top predicted URLs
+  - Implement DNS pre-resolution and connection warming
+  - Create privacy-safe preloading with user consent
+  - Add preloading controls in Settings with clear explanations
+  - Monitor preloading effectiveness and resource usage
+  - _Reuses: settingsStore.ts, existing privacy patterns_
+
+### Phase 12: Integration, Testing, and Polish
+
+- [ ] 51. Add comprehensive unit tests
+  - Test bookmark AI organization with mocked ollamaClient
+  - Test summarization and translation pipelines
+  - Test voice command intent mapping with synthetic data
+  - Test predictive navigation ranking algorithms
+  - Add property-based tests for data serialization
+  - _Reuses: existing test patterns, fast-check library_
+
+- [ ] 52. Implement integration tests
+  - Test end-to-end bookmark organization workflow
+  - Test reading list save and summarization flow
+  - Test voice command execution and feedback
+  - Test predictive navigation and preloading
+  - Test cross-feature interactions and data consistency
+  - _Reuses: existing integration test patterns_
+
+- [ ] 53. Performance optimization and monitoring
+  - Optimize AI API calls with batching and caching
+  - Implement lazy loading for bookmark and reading list data
+  - Add performance monitoring for voice recognition
+  - Optimize predictive navigation computation
+  - Add memory management for large datasets
+  - _Reuses: existing performance patterns, LRU caching_
+
+- [ ] 54. Accessibility and user experience improvements
+  - Add ARIA labels and keyboard navigation for all new components
+  - Implement screen reader support for voice commands
+  - Add high contrast mode support for new UI elements
+  - Create user onboarding for AI features
+  - Add feature discovery and help documentation
+  - _Reuses: existing accessibility patterns, onboarding system_
+
+- [ ] 55. Final integration and manual testing
+  - Test all AI features work together seamlessly
+  - Verify no regressions in existing functionality
+  - Test performance under realistic usage scenarios
+  - Validate privacy and security considerations
+  - Test offline graceful degradation
+  - _Reuses: existing testing procedures_
+
+- [ ] 56. Documentation and cleanup
+  - Update README with new AI & Intelligence features
+  - Add inline code documentation for new modules
+  - Create user guide for AI features and voice commands
+  - Clean up temporary files and debug code
+  - Update project architecture documentation
+  - _Reuses: existing documentation patterns_
+
+- [ ] 57. Final checkpoint - AI & Intelligence Enhancements complete
+  - Smart bookmarking with AI organization working end-to-end
+  - Content summarization and reading lists functional
+  - Translation services integrated with page analysis
+  - Voice commands working for major browser actions
+  - Predictive navigation providing relevant suggestions
+  - All features integrate seamlessly with existing architecture
+  - Performance targets met: AI responses <2s, voice recognition <1s
+  - Privacy and security requirements satisfied
+
 ## Notes
 
 - Tasks marked with `*` are optional property-based and comprehensive tests

@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('arc', {
     clearJarvisCache: () => ipcRenderer.invoke('jarvis:clearCache'),
     jarvisChat: (messages: Array<{from: string; text: string}>) => ipcRenderer.invoke('jarvis:chat', messages),
     getCurrentPageText: () => ipcRenderer.invoke('arc:getCurrentPageText'),
+    getCurrentTab: () => ipcRenderer.invoke('arc:getCurrentTab'),
     getRecentHistory: (limit?: number) => ipcRenderer.invoke('arc:getRecentHistory', limit),
     sendJarvisFeedback: (feedback: RecommendationFeedback) => ipcRenderer.invoke('jarvis:sendFeedback', feedback),
     
@@ -71,6 +72,33 @@ contextBridge.exposeInMainWorld('arc', {
     markOnboardingCompleted: () => ipcRenderer.invoke('arc:markOnboardingCompleted'),
     skipOnboarding: () => ipcRenderer.invoke('arc:skipOnboarding'),
     createDemoWorkspace: () => ipcRenderer.invoke('arc:createDemoWorkspace'),
+
+    // Enhanced summarization methods
+    summarizePage: (options?: { type?: 'short' | 'bullets' | 'insights' | 'detailed'; includeKeywords?: boolean; includeTopics?: boolean }) => ipcRenderer.invoke('arc:summarizePage', options),
+    summarizeText: (text: string, metadata?: { title?: string; url?: string; language?: string }, options?: { type?: 'short' | 'bullets' | 'insights' | 'detailed'; includeKeywords?: boolean; includeTopics?: boolean }) => ipcRenderer.invoke('arc:summarizeText', text, metadata, options),
+    getSummaryTypes: () => ipcRenderer.invoke('arc:getSummaryTypes'),
+    clearSummaryCache: () => ipcRenderer.invoke('arc:clearSummaryCache'),
+    getSummaryCacheStats: () => ipcRenderer.invoke('arc:getSummaryCacheStats'),
+
+    // Reading list methods
+    addToReadingList: (url: string, title: string, options?: { autoSummarize?: boolean; tags?: string[]; addedFrom?: 'manual' | 'jarvis' | 'command-palette' }) => ipcRenderer.invoke('arc:addToReadingList', url, title, options),
+    removeFromReadingList: (id: string) => ipcRenderer.invoke('arc:removeFromReadingList', id),
+    updateReadingListItem: (id: string, updates: { isRead?: boolean; progress?: number; tags?: string[] }) => ipcRenderer.invoke('arc:updateReadingListItem', id, updates),
+    getReadingList: (filter?: { isRead?: boolean; tags?: string[]; domain?: string; dateRange?: { start: number; end: number }; minReadingTime?: number; maxReadingTime?: number }) => ipcRenderer.invoke('arc:getReadingList', filter),
+    getReadingListItem: (id: string) => ipcRenderer.invoke('arc:getReadingListItem', id),
+    searchReadingList: (query: string) => ipcRenderer.invoke('arc:searchReadingList', query),
+    getReadingListStats: () => ipcRenderer.invoke('arc:getReadingListStats'),
+    clearReadingList: () => ipcRenderer.invoke('arc:clearReadingList'),
+    exportReadingList: () => ipcRenderer.invoke('arc:exportReadingList'),
+    importReadingList: (data: any, mode: 'merge' | 'replace') => ipcRenderer.invoke('arc:importReadingList', data, mode),
+
+    // Translation methods
+    detectLanguage: (text: string) => ipcRenderer.invoke('arc:detectLanguage', text),
+    translateText: (text: string, targetLanguage: string, sourceLanguage?: string) => ipcRenderer.invoke('arc:translateText', text, targetLanguage, sourceLanguage),
+    translatePageContent: (content: string, targetLanguage: string, sourceLanguage?: string, options?: { chunkSize?: number; preserveFormatting?: boolean }) => ipcRenderer.invoke('arc:translatePageContent', content, targetLanguage, sourceLanguage, options),
+    getSupportedLanguages: () => ipcRenderer.invoke('arc:getSupportedLanguages'),
+    clearTranslationCache: () => ipcRenderer.invoke('arc:clearTranslationCache'),
+    getTranslationCacheStats: () => ipcRenderer.invoke('arc:getTranslationCacheStats'),
 
     // Keyboard shortcut methods
     newTab: () => ipcRenderer.send('arc:newTab'),

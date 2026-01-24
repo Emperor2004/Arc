@@ -2,6 +2,8 @@ import { app, BrowserWindow } from 'electron';
 import { join } from 'path';
 import { setupIpc } from './ipc';
 import { DatabaseManager, DEFAULT_CONFIG } from '../core/database/DatabaseManager';
+import { MigrationManager } from '../core/database/MigrationManager';
+import { migrations } from '../core/database/migrations';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -13,6 +15,28 @@ async function initializeDatabase() {
     
     const dbManager = DatabaseManager.getInstance(DEFAULT_CONFIG);
     await dbManager.initialize();
+    
+    // Run migrations
+    console.log('Running database migrations...');
+    const migrationManager = new MigrationManager(dbManager);
+    
+    // Register all migrations
+    for (const migration of migrations) {
+      migrationManager.registerMigration(migration);
+    }
+    
+    // Apply pending migrations
+    const migrationResult = await migrationManager.migrate(DEFAULT_CONFIG.path);
+    if (migrationResult.applied > 0) {
+      console.log(`✅ Applied ${migrationResult.applied} database migrations`);
+    } else {
+      console.log('✅ No pending migrations');
+    }
+    
+    if (migrationResult.failed) {
+      console.error('❌ Migration failed:', migrationResult.failed);
+      throw new Error(`Migration ${migrationResult.failed.version} failed`);
+    }
     
     console.log('✅ Database initialized successfully');
     console.log('Database ready:', dbManager.isReady());

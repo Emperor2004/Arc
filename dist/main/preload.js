@@ -11,6 +11,7 @@ electron_1.contextBridge.exposeInMainWorld('arc', {
     clearJarvisCache: () => electron_1.ipcRenderer.invoke('jarvis:clearCache'),
     jarvisChat: (messages) => electron_1.ipcRenderer.invoke('jarvis:chat', messages),
     getCurrentPageText: () => electron_1.ipcRenderer.invoke('arc:getCurrentPageText'),
+    getCurrentTab: () => electron_1.ipcRenderer.invoke('arc:getCurrentTab'),
     getRecentHistory: (limit) => electron_1.ipcRenderer.invoke('arc:getRecentHistory', limit),
     sendJarvisFeedback: (feedback) => electron_1.ipcRenderer.invoke('jarvis:sendFeedback', feedback),
     // Settings methods
@@ -61,6 +62,30 @@ electron_1.contextBridge.exposeInMainWorld('arc', {
     markOnboardingCompleted: () => electron_1.ipcRenderer.invoke('arc:markOnboardingCompleted'),
     skipOnboarding: () => electron_1.ipcRenderer.invoke('arc:skipOnboarding'),
     createDemoWorkspace: () => electron_1.ipcRenderer.invoke('arc:createDemoWorkspace'),
+    // Enhanced summarization methods
+    summarizePage: (options) => electron_1.ipcRenderer.invoke('arc:summarizePage', options),
+    summarizeText: (text, metadata, options) => electron_1.ipcRenderer.invoke('arc:summarizeText', text, metadata, options),
+    getSummaryTypes: () => electron_1.ipcRenderer.invoke('arc:getSummaryTypes'),
+    clearSummaryCache: () => electron_1.ipcRenderer.invoke('arc:clearSummaryCache'),
+    getSummaryCacheStats: () => electron_1.ipcRenderer.invoke('arc:getSummaryCacheStats'),
+    // Reading list methods
+    addToReadingList: (url, title, options) => electron_1.ipcRenderer.invoke('arc:addToReadingList', url, title, options),
+    removeFromReadingList: (id) => electron_1.ipcRenderer.invoke('arc:removeFromReadingList', id),
+    updateReadingListItem: (id, updates) => electron_1.ipcRenderer.invoke('arc:updateReadingListItem', id, updates),
+    getReadingList: (filter) => electron_1.ipcRenderer.invoke('arc:getReadingList', filter),
+    getReadingListItem: (id) => electron_1.ipcRenderer.invoke('arc:getReadingListItem', id),
+    searchReadingList: (query) => electron_1.ipcRenderer.invoke('arc:searchReadingList', query),
+    getReadingListStats: () => electron_1.ipcRenderer.invoke('arc:getReadingListStats'),
+    clearReadingList: () => electron_1.ipcRenderer.invoke('arc:clearReadingList'),
+    exportReadingList: () => electron_1.ipcRenderer.invoke('arc:exportReadingList'),
+    importReadingList: (data, mode) => electron_1.ipcRenderer.invoke('arc:importReadingList', data, mode),
+    // Translation methods
+    detectLanguage: (text) => electron_1.ipcRenderer.invoke('arc:detectLanguage', text),
+    translateText: (text, targetLanguage, sourceLanguage) => electron_1.ipcRenderer.invoke('arc:translateText', text, targetLanguage, sourceLanguage),
+    translatePageContent: (content, targetLanguage, sourceLanguage, options) => electron_1.ipcRenderer.invoke('arc:translatePageContent', content, targetLanguage, sourceLanguage, options),
+    getSupportedLanguages: () => electron_1.ipcRenderer.invoke('arc:getSupportedLanguages'),
+    clearTranslationCache: () => electron_1.ipcRenderer.invoke('arc:clearTranslationCache'),
+    getTranslationCacheStats: () => electron_1.ipcRenderer.invoke('arc:getTranslationCacheStats'),
     // Keyboard shortcut methods
     newTab: () => electron_1.ipcRenderer.send('arc:newTab'),
     newIncognitoTab: () => electron_1.ipcRenderer.send('arc:newIncognitoTab'),

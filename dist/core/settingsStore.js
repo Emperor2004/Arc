@@ -25,12 +25,29 @@ const DEFAULT_SETTINGS = {
     ollamaModel: 'llama3:latest',
     ollamaEnabled: true, // Enable Ollama by default
     ollamaEndpoint: 'http://localhost:11434',
+    // Translation defaults
+    translationEnabled: true,
+    defaultTargetLanguage: 'en',
+    autoDetectLanguage: true,
+    translationCacheEnabled: true,
+    // Voice commands defaults
+    voiceCommandsEnabled: true,
+    voiceLanguage: 'en-US',
+    voiceContinuousMode: false,
+    voiceConfidenceThreshold: 0.7,
     // Accessibility defaults
     reducedMotion: false,
     highContrast: false,
     fontSize: 'medium',
     focusIndicators: true,
     screenReaderOptimizations: false,
+    // Preloading defaults
+    preloadingEnabled: false, // Disabled by default, requires user consent
+    preloadingConsent: false,
+    preloadingMaxConnections: 3,
+    preloadingTimeout: 5000,
+    preloadingOnlyOnWifi: true,
+    preloadingMinConfidence: 0.3,
 };
 // Browser-safe settings management using localStorage
 function loadSettings() {

@@ -11,6 +11,29 @@ export interface HistoryEntry {
     title: string | null;
     visited_at: number;
     visit_count: number;
+    // Enhanced fields for predictive navigation
+    domain?: string;
+    path?: string;
+    query_params?: string;
+    referrer?: string;
+    session_id?: string;
+    time_spent?: number; // milliseconds spent on page
+    scroll_depth?: number; // percentage of page scrolled
+    interactions?: number; // clicks, form submissions, etc.
+    visit_patterns?: {
+        hour_of_day: number;
+        day_of_week: number;
+        time_of_visit: number;
+    };
+    context?: {
+        previous_url?: string;
+        next_url?: string;
+        tab_count?: number;
+        is_search_result?: boolean;
+        search_query?: string;
+    };
+    engagement_score?: number; // calculated engagement metric
+    topic_tags?: string[]; // AI-generated topic classifications
 }
 
 export type RecommendationKind = 'favorite' | 'old_but_gold' | 'explore';
@@ -57,12 +80,29 @@ export interface ArcSettings {
     ollamaModel?: string;
     ollamaEnabled?: boolean;
     ollamaEndpoint?: string;
+    // Translation settings
+    translationEnabled?: boolean;
+    defaultTargetLanguage?: string;
+    autoDetectLanguage?: boolean;
+    translationCacheEnabled?: boolean;
+    // Voice commands settings
+    voiceCommandsEnabled?: boolean;
+    voiceLanguage?: string;
+    voiceContinuousMode?: boolean;
+    voiceConfidenceThreshold?: number;
     // Accessibility settings
     reducedMotion?: boolean;
     highContrast?: boolean;
     fontSize?: 'small' | 'medium' | 'large' | 'extra-large';
     focusIndicators?: boolean;
     screenReaderOptimizations?: boolean;
+    // Preloading settings
+    preloadingEnabled?: boolean;
+    preloadingConsent?: boolean;
+    preloadingMaxConnections?: number;
+    preloadingTimeout?: number;
+    preloadingOnlyOnWifi?: boolean;
+    preloadingMinConfidence?: number;
 }
 
 export interface Bookmark {
@@ -73,6 +113,17 @@ export interface Bookmark {
     updatedAt: number;
     tags?: string[];
     favicon?: string;
+    folderId?: string;
+}
+
+export interface BookmarkFolder {
+    id: string;
+    name: string;
+    createdAt: number;
+    smart?: boolean;
+    rule?: string;
+    color?: 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'gray' | 'orange' | 'pink';
+    description?: string;
 }
 
 export interface Tab {

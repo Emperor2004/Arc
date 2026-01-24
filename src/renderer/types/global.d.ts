@@ -39,6 +39,7 @@ export interface ArcAPI {
   clearJarvisCache: () => Promise<{ ok: boolean }>;
   jarvisChat: (messages: Array<{from: string; text: string}>) => Promise<any>;
   getCurrentPageText: () => Promise<{ ok: boolean; text?: string; error?: string }>;
+  getCurrentTab: () => Promise<{ url: string; title: string } | null>;
   getRecentHistory: (limit?: number) => Promise<HistoryEntry[]>;
   sendJarvisFeedback: (feedback: RecommendationFeedback) => Promise<{ ok: boolean }>;
   
@@ -88,6 +89,33 @@ export interface ArcAPI {
   markOnboardingCompleted: () => Promise<{ ok: boolean; error?: string }>;
   skipOnboarding: () => Promise<{ ok: boolean; error?: string }>;
   createDemoWorkspace: () => Promise<{ ok: boolean; workspaceId: string | null; error?: string }>;
+
+  // Enhanced summarization methods
+  summarizePage: (options?: { type?: 'short' | 'bullets' | 'insights' | 'detailed'; includeKeywords?: boolean; includeTopics?: boolean }) => Promise<{ ok: boolean; result: any; error?: string }>;
+  summarizeText: (text: string, metadata?: { title?: string; url?: string; language?: string }, options?: { type?: 'short' | 'bullets' | 'insights' | 'detailed'; includeKeywords?: boolean; includeTopics?: boolean }) => Promise<{ ok: boolean; result: any; error?: string }>;
+  getSummaryTypes: () => Promise<{ ok: boolean; types: Array<{ type: string; name: string; description: string }>; error?: string }>;
+  clearSummaryCache: () => Promise<{ ok: boolean; error?: string }>;
+  getSummaryCacheStats: () => Promise<{ ok: boolean; stats: any; error?: string }>;
+
+  // Reading list methods
+  addToReadingList: (url: string, title: string, options?: { autoSummarize?: boolean; tags?: string[]; addedFrom?: 'manual' | 'jarvis' | 'command-palette' }) => Promise<{ ok: boolean; item?: any; error?: string }>;
+  removeFromReadingList: (id: string) => Promise<{ ok: boolean; error?: string }>;
+  updateReadingListItem: (id: string, updates: { isRead?: boolean; progress?: number; tags?: string[] }) => Promise<{ ok: boolean; item?: any; error?: string }>;
+  getReadingList: (filter?: { isRead?: boolean; tags?: string[]; domain?: string; dateRange?: { start: number; end: number }; minReadingTime?: number; maxReadingTime?: number }) => Promise<{ ok: boolean; items: any[]; error?: string }>;
+  getReadingListItem: (id: string) => Promise<{ ok: boolean; item: any | null; error?: string }>;
+  searchReadingList: (query: string) => Promise<{ ok: boolean; items: any[]; error?: string }>;
+  getReadingListStats: () => Promise<{ ok: boolean; stats: any; error?: string }>;
+  clearReadingList: () => Promise<{ ok: boolean; error?: string }>;
+  exportReadingList: () => Promise<{ ok: boolean; data?: any; error?: string }>;
+  importReadingList: (data: any, mode: 'merge' | 'replace') => Promise<{ ok: boolean; imported: number; error?: string }>;
+
+  // Translation methods
+  detectLanguage: (text: string) => Promise<{ ok: boolean; result?: any; error?: string; code?: string }>;
+  translateText: (text: string, targetLanguage: string, sourceLanguage?: string) => Promise<{ ok: boolean; result?: any; error?: string; code?: string }>;
+  translatePageContent: (content: string, targetLanguage: string, sourceLanguage?: string, options?: { chunkSize?: number; preserveFormatting?: boolean }) => Promise<{ ok: boolean; result?: any; error?: string; code?: string }>;
+  getSupportedLanguages: () => Promise<{ ok: boolean; allLanguages?: any[]; popularLanguages?: any[]; error?: string }>;
+  clearTranslationCache: () => Promise<{ ok: boolean; cleared?: number; error?: string }>;
+  getTranslationCacheStats: () => Promise<{ ok: boolean; stats?: any; error?: string }>;
 
   // Keyboard shortcut methods
   newTab: () => void;

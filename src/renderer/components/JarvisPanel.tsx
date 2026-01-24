@@ -465,6 +465,70 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                             flex: '1 1 auto',
                             fontSize: '11px',
                             padding: '6px 8px',
+                            minWidth: '80px'
+                        }}
+                        onClick={async () => {
+                            try {
+                                const { executeJarvisAction } = await import('../../core/jarvisActions');
+                                const result = await executeJarvisAction('summarize-enhanced');
+                                
+                                // Add the enhanced summary result to chat
+                                const summaryMessage = {
+                                    from: 'jarvis',
+                                    text: result
+                                };
+                                
+                                jarvisController.addMessage(summaryMessage);
+                                logAction('Enhanced page summary completed');
+                            } catch (error) {
+                                console.error('Enhanced summary error:', error);
+                                logAction(`Enhanced page summary failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                            }
+                        }}
+                        disabled={status === 'thinking'}
+                        aria-label="Get enhanced summary with insights and keywords"
+                        title="Get a detailed summary with key insights, topics, and keywords"
+                    >
+                        📊 Enhanced
+                    </button>
+                    <button
+                        className="btn-secondary"
+                        style={{
+                            flex: '1 1 auto',
+                            fontSize: '11px',
+                            padding: '6px 8px',
+                            minWidth: '80px'
+                        }}
+                        onClick={async () => {
+                            try {
+                                const { executeJarvisAction } = await import('../../core/jarvisActions');
+                                const result = await executeJarvisAction('multiple-summaries');
+                                
+                                // Add the multiple summaries result to chat
+                                const summaryMessage = {
+                                    from: 'jarvis',
+                                    text: result
+                                };
+                                
+                                jarvisController.addMessage(summaryMessage);
+                                logAction('Multiple summaries completed');
+                            } catch (error) {
+                                console.error('Multiple summaries error:', error);
+                                logAction(`Multiple summaries failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                            }
+                        }}
+                        disabled={status === 'thinking'}
+                        aria-label="Get multiple summary types for comprehensive analysis"
+                        title="Get quick summary, key points, and insights all at once"
+                    >
+                        📚 Complete
+                    </button>
+                    <button
+                        className="btn-secondary"
+                        style={{
+                            flex: '1 1 auto',
+                            fontSize: '11px',
+                            padding: '6px 8px',
                             minWidth: '70px'
                         }}
                         onClick={async () => {
@@ -490,6 +554,296 @@ const JarvisPanel = forwardRef<JarvisPanelHandle, JarvisPanelProps>(({ refreshTr
                         title="Get a simple explanation of the current page"
                     >
                         💡 Explain
+                    </button>
+                </div>
+            </div>
+
+            {/* Reading List Actions */}
+            <div style={{
+                padding: '12px 0',
+                borderBottom: '1px solid var(--glass-border)'
+            }}
+            role="region"
+            aria-labelledby="reading-list-heading">
+                <h3 id="reading-list-heading" style={{ 
+                    margin: '0 0 8px 0', 
+                    fontSize: '14px', 
+                    fontWeight: 600,
+                    color: 'var(--text-primary)'
+                }}>
+                    Reading List
+                </h3>
+                <div style={{ 
+                    display: 'flex', 
+                    gap: '6px', 
+                    flexWrap: 'wrap' 
+                }} 
+                role="group" 
+                aria-label="Reading list actions">
+                    <button
+                        className="btn-secondary"
+                        style={{
+                            flex: '1 1 auto',
+                            fontSize: '11px',
+                            padding: '6px 8px',
+                            minWidth: '100px'
+                        }}
+                        onClick={async () => {
+                            try {
+                                // Get current tab info
+                                const currentTab = await window.arc.getCurrentTab();
+                                if (!currentTab) {
+                                    throw new Error('No active tab found');
+                                }
+
+                                // Add to reading list with auto-summarization
+                                const result = await window.arc.addToReadingList(currentTab.url, currentTab.title, {
+                                    autoSummarize: true,
+                                    addedFrom: 'jarvis'
+                                });
+
+                                if (result.ok) {
+                                    // Add success message to chat
+                                    const successMessage = {
+                                        from: 'jarvis',
+                                        text: `✅ **Article Saved!**\n\n"${currentTab.title}" has been added to your reading list with an AI-generated summary. You can access it from the Reading List panel.`
+                                    };
+                                    jarvisController.addMessage(successMessage);
+                                    logAction('Article saved to reading list with summary');
+                                } else {
+                                    throw new Error(result.error || 'Failed to save article');
+                                }
+                            } catch (error) {
+                                console.error('Save to reading list error:', error);
+                                const errorMessage = {
+                                    from: 'jarvis',
+                                    text: `❌ **Save Failed**\n\nI couldn't save this article to your reading list: ${error instanceof Error ? error.message : 'Unknown error'}`
+                                };
+                                jarvisController.addMessage(errorMessage);
+                                logAction(`Save to reading list failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                            }
+                        }}
+                        disabled={status === 'thinking'}
+                        aria-label="Save current page to reading list with summary"
+                        title="Save this article to your reading list with AI-generated summary"
+                    >
+                        📚 Save Article
+                    </button>
+                    <button
+                        className="btn-secondary"
+                        style={{
+                            flex: '1 1 auto',
+                            fontSize: '11px',
+                            padding: '6px 8px',
+                            minWidth: '80px'
+                        }}
+                        onClick={async () => {
+                            try {
+                                // Get current tab info
+                                const currentTab = await window.arc.getCurrentTab();
+                                if (!currentTab) {
+                                    throw new Error('No active tab found');
+                                }
+
+                                // Add to reading list without auto-summarization
+                                const result = await window.arc.addToReadingList(currentTab.url, currentTab.title, {
+                                    autoSummarize: false,
+                                    addedFrom: 'jarvis'
+                                });
+
+                                if (result.ok) {
+                                    const successMessage = {
+                                        from: 'jarvis',
+                                        text: `✅ **Article Saved!**\n\n"${currentTab.title}" has been added to your reading list. You can access it from the Reading List panel.`
+                                    };
+                                    jarvisController.addMessage(successMessage);
+                                    logAction('Article saved to reading list');
+                                } else {
+                                    throw new Error(result.error || 'Failed to save article');
+                                }
+                            } catch (error) {
+                                console.error('Save to reading list error:', error);
+                                const errorMessage = {
+                                    from: 'jarvis',
+                                    text: `❌ **Save Failed**\n\nI couldn't save this article to your reading list: ${error instanceof Error ? error.message : 'Unknown error'}`
+                                };
+                                jarvisController.addMessage(errorMessage);
+                                logAction(`Save to reading list failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                            }
+                        }}
+                        disabled={status === 'thinking'}
+                        aria-label="Save current page to reading list without summary"
+                        title="Save this article to your reading list without generating a summary"
+                    >
+                        📖 Save Only
+                    </button>
+                </div>
+            </div>
+
+            {/* Translation Actions */}
+            <div style={{
+                padding: '12px 0',
+                borderBottom: '1px solid var(--glass-border)'
+            }}
+            role="region"
+            aria-labelledby="translation-heading">
+                <h3 id="translation-heading" style={{ 
+                    margin: '0 0 8px 0', 
+                    fontSize: '14px', 
+                    fontWeight: 600,
+                    color: 'var(--text-primary)'
+                }}>
+                    Translation
+                </h3>
+                <div style={{ 
+                    display: 'flex', 
+                    gap: '6px', 
+                    flexWrap: 'wrap' 
+                }} 
+                role="group" 
+                aria-label="Translation actions">
+                    <button
+                        className="btn-secondary"
+                        style={{
+                            flex: '1 1 auto',
+                            fontSize: '11px',
+                            padding: '6px 8px',
+                            minWidth: '80px'
+                        }}
+                        onClick={async () => {
+                            try {
+                                // Get current page content
+                                const pageResult = await window.arc.getCurrentPageText();
+                                if (!pageResult.ok || !pageResult.text) {
+                                    throw new Error('Could not get page content');
+                                }
+
+                                // Detect language first
+                                const detectionResult = await window.arc.detectLanguage(pageResult.text);
+                                if (!detectionResult.ok) {
+                                    throw new Error('Could not detect page language');
+                                }
+
+                                const detectedLang = detectionResult.result?.language || 'unknown';
+                                const langName = detectedLang === 'en' ? 'English' : 
+                                                detectedLang === 'es' ? 'Spanish' :
+                                                detectedLang === 'fr' ? 'French' :
+                                                detectedLang === 'de' ? 'German' :
+                                                detectedLang === 'it' ? 'Italian' :
+                                                detectedLang === 'pt' ? 'Portuguese' :
+                                                detectedLang === 'ru' ? 'Russian' :
+                                                detectedLang === 'ja' ? 'Japanese' :
+                                                detectedLang === 'ko' ? 'Korean' :
+                                                detectedLang === 'zh' ? 'Chinese' :
+                                                detectedLang;
+
+                                // Add detection result to chat
+                                const detectionMessage = {
+                                    from: 'jarvis',
+                                    text: `🌐 **Language Detected**\n\nI detected that this page is written in **${langName}** (${detectedLang}) with ${Math.round((detectionResult.result?.confidence || 0) * 100)}% confidence.\n\nWould you like me to translate it to another language?`
+                                };
+                                
+                                jarvisController.addMessage(detectionMessage);
+                                logAction('Page language detected: ' + detectedLang);
+                            } catch (error) {
+                                console.error('Language detection error:', error);
+                                const errorMessage = {
+                                    from: 'jarvis',
+                                    text: `❌ **Detection Failed**\n\nI couldn't detect the language of this page: ${error instanceof Error ? error.message : 'Unknown error'}`
+                                };
+                                jarvisController.addMessage(errorMessage);
+                                logAction(`Language detection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                            }
+                        }}
+                        disabled={status === 'thinking'}
+                        aria-label="Detect the language of the current page"
+                        title="Detect what language this page is written in"
+                    >
+                        🔍 Detect Language
+                    </button>
+                    <button
+                        className="btn-secondary"
+                        style={{
+                            flex: '1 1 auto',
+                            fontSize: '11px',
+                            padding: '6px 8px',
+                            minWidth: '80px'
+                        }}
+                        onClick={async () => {
+                            try {
+                                // Get current page content
+                                const pageResult = await window.arc.getCurrentPageText();
+                                if (!pageResult.ok || !pageResult.text) {
+                                    throw new Error('Could not get page content');
+                                }
+
+                                // Translate to English (most common target)
+                                const translationResult = await window.arc.translatePageContent(
+                                    pageResult.text,
+                                    'en',
+                                    undefined,
+                                    { chunkSize: 2000, preserveFormatting: true }
+                                );
+
+                                if (!translationResult.ok) {
+                                    throw new Error(translationResult.error || 'Translation failed');
+                                }
+
+                                const result = translationResult.result;
+                                const sourceLangName = result.sourceLanguage === 'es' ? 'Spanish' :
+                                                     result.sourceLanguage === 'fr' ? 'French' :
+                                                     result.sourceLanguage === 'de' ? 'German' :
+                                                     result.sourceLanguage === 'it' ? 'Italian' :
+                                                     result.sourceLanguage === 'pt' ? 'Portuguese' :
+                                                     result.sourceLanguage === 'ru' ? 'Russian' :
+                                                     result.sourceLanguage === 'ja' ? 'Japanese' :
+                                                     result.sourceLanguage === 'ko' ? 'Korean' :
+                                                     result.sourceLanguage === 'zh' ? 'Chinese' :
+                                                     result.sourceLanguage;
+
+                                // Add translation result to chat
+                                const translationMessage = {
+                                    from: 'jarvis',
+                                    text: `🌐 **Page Translated**\n\n**From:** ${sourceLangName} (${result.sourceLanguage})\n**To:** English (en)\n**Confidence:** ${Math.round(result.confidence * 100)}%\n**Translation Time:** ${result.translationTime}ms\n\n**Translation:**\n\n${result.translatedText.substring(0, 1000)}${result.translatedText.length > 1000 ? '...\n\n*[Translation truncated for display]*' : ''}`
+                                };
+                                
+                                jarvisController.addMessage(translationMessage);
+                                logAction('Page translated to English');
+                            } catch (error) {
+                                console.error('Translation error:', error);
+                                const errorMessage = {
+                                    from: 'jarvis',
+                                    text: `❌ **Translation Failed**\n\nI couldn't translate this page: ${error instanceof Error ? error.message : 'Unknown error'}`
+                                };
+                                jarvisController.addMessage(errorMessage);
+                                logAction(`Translation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                            }
+                        }}
+                        disabled={status === 'thinking'}
+                        aria-label="Translate current page to English"
+                        title="Translate this page to English"
+                    >
+                        🌐 To English
+                    </button>
+                    <button
+                        className="btn-secondary"
+                        style={{
+                            flex: '1 1 auto',
+                            fontSize: '11px',
+                            padding: '6px 8px',
+                            minWidth: '80px'
+                        }}
+                        onClick={() => {
+                            // Trigger translation panel open
+                            const event = new CustomEvent('arc:translation-open');
+                            window.dispatchEvent(event);
+                            logAction('Translation panel opened');
+                        }}
+                        disabled={status === 'thinking'}
+                        aria-label="Open translation panel for more options"
+                        title="Open the translation panel for more language options"
+                    >
+                        🔧 More Options
                     </button>
                 </div>
             </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import WebviewContainer from './WebviewContainer';
 import TabBar from './TabBar';
 import AddressBar from './AddressBar';
+import VoiceMicrophoneButton from './VoiceMicrophoneButton';
 import { useTabsController } from '../hooks/useTabsController';
 import { useSettingsController } from '../hooks/useSettingsController';
 import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -154,6 +155,37 @@ const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete, onMax
         }
     }, [activeTab, updateActiveTabUrl, setUrl, logAction]);
 
+    // Listen for voice navigation events
+    React.useEffect(() => {
+        const handleVoiceNavigation = (event: CustomEvent) => {
+            const { url: voiceUrl } = event.detail;
+            console.log('🎤 [BrowserShell] Voice navigation event received:', voiceUrl);
+            
+            if (voiceUrl && activeTab) {
+                // Use search engine manager to normalize input
+                const searchEngine = settings.searchEngine || 'google';
+                const targetUrl = normalizeInput(voiceUrl, searchEngine as any);
+                
+                console.log(`🎤 [BrowserShell] Voice navigating to: ${targetUrl}`);
+                
+                // Update URL and navigate
+                setUrl(targetUrl);
+                updateActiveTabUrl(targetUrl);
+                
+                if (window.arc) {
+                    window.arc.navigate(targetUrl);
+                    logAction(`Voice navigation to: ${targetUrl}`);
+                }
+            }
+        };
+
+        window.addEventListener('arc:voice-navigate', handleVoiceNavigation as EventListener);
+
+        return () => {
+            window.removeEventListener('arc:voice-navigate', handleVoiceNavigation as EventListener);
+        };
+    }, [activeTab, updateActiveTabUrl, setUrl, settings.searchEngine, logAction]);
+
     const handleNavigate = () => {
         let targetUrl = url;
         
@@ -233,6 +265,8 @@ const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete, onMax
                 canGoBack={canGoBack}
                 canGoForward={canGoForward}
                 hasActiveTab={!!activeTab}
+                currentUrl={activeTab?.url}
+                recentUrls={tabs.slice(-5).map(tab => tab.url).filter(Boolean)}
             />
 
             {/* Webview content */}
@@ -247,6 +281,13 @@ const BrowserShell: React.FC<BrowserShellProps> = ({ onNavigationComplete, onMax
                     />
                 )}
             </div>
+
+            {/* Voice Microphone Button */}
+            <VoiceMicrophoneButton
+                enabled={settings.voiceCommandsEnabled !== false}
+                position="bottom-right"
+                showHelp={true}
+            />
         </div>
     );
 };

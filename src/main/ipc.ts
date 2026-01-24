@@ -562,7 +562,7 @@ export const setupIpc = (mainWindow: BrowserWindow) => {
         }
     });
 
-    // Page content extraction handler
+    // Enhanced page content extraction handler
     ipcMain.handle('arc:getCurrentPageText', async (event) => {
         try {
             console.log('📄 [IPC] arc:getCurrentPageText called');
@@ -578,7 +578,99 @@ export const setupIpc = (mainWindow: BrowserWindow) => {
                 return { ok: false, error: 'No active window found' };
             }
             
-            // Execute JavaScript in the renderer to get the active webview content
+            // Enhanced content extraction script
+            const CONTENT_EXTRACTION_SCRIPT = `
+                (function() {
+                    try {
+                        // Remove unwanted elements
+                        const unwantedSelectors = [
+                            'script', 'style', 'nav', 'header', 'footer', 
+                            '.advertisement', '.ad', '.ads', '.sidebar',
+                            '.menu', '.navigation', '.breadcrumb', '.social-share',
+                            '[role="banner"]', '[role="navigation"]', '[role="complementary"]'
+                        ];
+                        
+                        const unwantedElements = document.querySelectorAll(unwantedSelectors.join(', '));
+                        const tempContainer = document.createElement('div');
+                        tempContainer.innerHTML = document.body.innerHTML;
+                        
+                        // Remove unwanted elements from temp container
+                        unwantedSelectors.forEach(selector => {
+                            const elements = tempContainer.querySelectorAll(selector);
+                            elements.forEach(el => el.remove());
+                        });
+                        
+                        // Extract main content
+                        let mainContent = '';
+                        const contentSelectors = [
+                            'main', 'article', '[role="main"]', '.content', '.post-content',
+                            '.entry-content', '.article-content', '.story-body', '.post-body'
+                        ];
+                        
+                        let mainElement = null;
+                        for (const selector of contentSelectors) {
+                            mainElement = tempContainer.querySelector(selector);
+                            if (mainElement) break;
+                        }
+                        
+                        // If no main content area found, use the whole body
+                        if (!mainElement) {
+                            mainElement = tempContainer;
+                        }
+                        
+                        // Extract text content
+                        mainContent = mainElement.innerText || mainElement.textContent || '';
+                        
+                        // Clean up the text
+                        mainContent = mainContent
+                            .replace(/\\s+/g, ' ')  // Replace multiple whitespace with single space
+                            .replace(/\\n\\s*\\n/g, '\\n\\n')  // Clean up line breaks
+                            .trim();
+                        
+                        // Extract metadata
+                        const images = document.querySelectorAll('img').length;
+                        const videos = document.querySelectorAll('video, iframe[src*="youtube"], iframe[src*="vimeo"]').length;
+                        const links = document.querySelectorAll('a[href]').length;
+                        const tables = document.querySelectorAll('table').length > 0;
+                        const codeBlocks = document.querySelectorAll('pre, code, .highlight').length > 0;
+                        
+                        // Detect language (simple heuristic)
+                        const lang = document.documentElement.lang || 
+                                     document.querySelector('meta[http-equiv="content-language"]')?.getAttribute('content') ||
+                                     'en';
+                        
+                        return {
+                            text: mainContent,
+                            url: window.location.href,
+                            title: document.title || '',
+                            language: lang,
+                            metadata: {
+                                hasImages: images > 0,
+                                hasVideos: videos > 0,
+                                hasLinks: links,
+                                hasTables: tables,
+                                hasCode: codeBlocks
+                            }
+                        };
+                    } catch (error) {
+                        return {
+                            text: document.body ? document.body.innerText.slice(0, 8000) : '',
+                            url: window.location.href,
+                            title: document.title || '',
+                            language: 'en',
+                            metadata: {
+                                hasImages: false,
+                                hasVideos: false,
+                                hasLinks: 0,
+                                hasTables: false,
+                                hasCode: false
+                            }
+                        };
+                    }
+                })()
+            `;
+            
+            // Execute enhanced JavaScript in the renderer to get the active webview content
             const result = await window.webContents.executeJavaScript(`
                 (function() {
                     try {
@@ -588,20 +680,52 @@ export const setupIpc = (mainWindow: BrowserWindow) => {
                             return { ok: false, error: 'No active webview found' };
                         }
                         
-                        // Execute JavaScript in the webview to get page content
+                        // Execute enhanced content extraction in the webview
                         return new Promise((resolve) => {
                             try {
-                                webview.executeJavaScript(\`
-                                    (function() {
-                                        try {
-                                            const text = document.body ? document.body.innerText : '';
-                                            return text.slice(0, 8000); // Limit to 8000 characters
-                                        } catch (e) {
-                                            return '';
+                                webview.executeJavaScript(\`${CONTENT_EXTRACTION_SCRIPT}\`).then((extractedData) => {
+                                    if (!extractedData || !extractedData.text) {
+                                        resolve({ ok: false, error: 'No content extracted' });
+                                        return;
+                                    }
+                                    
+                                    // Apply length limit and calculate metadata
+                                    let text = extractedData.text.trim();
+                                    const maxLength = 8000;
+                                    const truncated = text.length > maxLength;
+                                    
+                                    if (truncated) {
+                                        text = text.slice(0, maxLength);
+                                        // Try to end at a sentence boundary
+                                        const lastSentence = text.lastIndexOf('.');
+                                        if (lastSentence > maxLength * 0.8) {
+                                            text = text.slice(0, lastSentence + 1);
                                         }
-                                    })()
-                                \`).then((text) => {
-                                    resolve({ ok: true, text: text || '' });
+                                    }
+                                    
+                                    // Calculate word count and reading time
+                                    const wordCount = text.trim().split(/\\s+/).filter(word => word.length > 0).length;
+                                    const readingTime = Math.ceil(wordCount / 225); // 225 words per minute
+                                    
+                                    // Extract domain
+                                    let domain = 'unknown';
+                                    try {
+                                        domain = new URL(extractedData.url).hostname;
+                                    } catch (e) {}
+                                    
+                                    resolve({ 
+                                        ok: true, 
+                                        text,
+                                        url: extractedData.url,
+                                        title: extractedData.title,
+                                        truncated,
+                                        extractedAt: Date.now(),
+                                        wordCount,
+                                        readingTime,
+                                        language: extractedData.language,
+                                        domain,
+                                        metadata: extractedData.metadata
+                                    });
                                 }).catch((error) => {
                                     resolve({ ok: false, error: 'Failed to extract page content: ' + error.message });
                                 });
@@ -615,9 +739,14 @@ export const setupIpc = (mainWindow: BrowserWindow) => {
                 })()
             `);
             
-            console.log('📄 [IPC] Page content extraction result:', {
+            console.log('📄 [IPC] Enhanced page content extraction result:', {
                 ok: result.ok,
                 textLength: result.text ? result.text.length : 0,
+                wordCount: result.wordCount || 0,
+                readingTime: result.readingTime || 0,
+                language: result.language,
+                domain: result.domain,
+                truncated: result.truncated,
                 error: result.error
             });
             
@@ -817,6 +946,390 @@ export const setupIpc = (mainWindow: BrowserWindow) => {
             return { 
                 ok: false, 
                 cleared: 0,
+                error: err instanceof Error ? err.message : 'Unknown error'
+            };
+        }
+    });
+
+    // Enhanced summarization handlers
+    ipcMain.handle('arc:summarizePage', async (_event, options?: { type?: 'short' | 'bullets' | 'insights' | 'detailed'; includeKeywords?: boolean; includeTopics?: boolean }) => {
+        try {
+            console.log('📝 [IPC] arc:summarizePage called with options:', options);
+            
+            const { summarizeCurrentPage } = await import('../core/summarization');
+            const summaryOptions = {
+                type: options?.type || 'short' as const,
+                includeKeywords: options?.includeKeywords,
+                includeTopics: options?.includeTopics
+            };
+            const result = await summarizeCurrentPage(summaryOptions);
+            
+            console.log('📝 [IPC] Summarization result:', 'error' in result ? 'error' : 'success');
+            
+            return { ok: true, result };
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:summarizePage:', err);
+            return { 
+                ok: false, 
+                error: err instanceof Error ? err.message : 'Unknown error',
+                result: null
+            };
+        }
+    });
+
+    ipcMain.handle('arc:summarizeText', async (_event, text: string, metadata?: { title?: string; url?: string; language?: string }, options?: { type?: 'short' | 'bullets' | 'insights' | 'detailed'; includeKeywords?: boolean; includeTopics?: boolean }) => {
+        try {
+            console.log('📝 [IPC] arc:summarizeText called:', {
+                textLength: text.length,
+                hasMetadata: !!metadata,
+                options
+            });
+            
+            const { summarizeText } = await import('../core/summarization');
+            const summaryOptions = {
+                type: options?.type || 'short' as const,
+                includeKeywords: options?.includeKeywords,
+                includeTopics: options?.includeTopics
+            };
+            const result = await summarizeText(text, metadata || {}, summaryOptions);
+            
+            console.log('📝 [IPC] Text summarization result:', 'error' in result ? 'error' : 'success');
+            
+            return { ok: true, result };
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:summarizeText:', err);
+            return { 
+                ok: false, 
+                error: err instanceof Error ? err.message : 'Unknown error',
+                result: null
+            };
+        }
+    });
+
+    ipcMain.handle('arc:getSummaryTypes', async () => {
+        try {
+            const { getSummaryTypes } = await import('../core/summarization');
+            const types = getSummaryTypes();
+            return { ok: true, types };
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:getSummaryTypes:', err);
+            return { ok: false, types: [], error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+
+    ipcMain.handle('arc:clearSummaryCache', async () => {
+        try {
+            const { clearSummaryCache } = await import('../core/summarization');
+            clearSummaryCache();
+            return { ok: true };
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:clearSummaryCache:', err);
+            return { ok: false, error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+
+    ipcMain.handle('arc:getSummaryCacheStats', async () => {
+        try {
+            const { getSummaryCacheStats } = await import('../core/summarization');
+            const stats = getSummaryCacheStats();
+            return { ok: true, stats };
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:getSummaryCacheStats:', err);
+            return { ok: false, stats: null, error: err instanceof Error ? err.message : 'Unknown error' };
+        }
+    });
+
+    // Reading list handlers
+    ipcMain.handle('arc:addToReadingList', async (_event, url: string, title: string, options?: { autoSummarize?: boolean; tags?: string[]; addedFrom?: 'manual' | 'jarvis' | 'command-palette' }) => {
+        try {
+            console.log('📚 [IPC] arc:addToReadingList called:', { url, title, options });
+            
+            const { addToReadingList } = await import('../core/readingListStore');
+            const result = await addToReadingList(url, title, options || {});
+            
+            console.log('📚 [IPC] Add to reading list result:', result.ok ? 'success' : 'failed');
+            
+            return result;
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:addToReadingList:', err);
+            return { 
+                ok: false, 
+                error: err instanceof Error ? err.message : 'Unknown error'
+            };
+        }
+    });
+
+    ipcMain.handle('arc:removeFromReadingList', async (_event, id: string) => {
+        try {
+            console.log('📚 [IPC] arc:removeFromReadingList called:', id);
+            
+            const { removeFromReadingList } = await import('../core/readingListStore');
+            const result = await removeFromReadingList(id);
+            
+            return result;
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:removeFromReadingList:', err);
+            return { 
+                ok: false, 
+                error: err instanceof Error ? err.message : 'Unknown error'
+            };
+        }
+    });
+
+    ipcMain.handle('arc:updateReadingListItem', async (_event, id: string, updates: { isRead?: boolean; progress?: number; tags?: string[] }) => {
+        try {
+            console.log('📚 [IPC] arc:updateReadingListItem called:', { id, updates });
+            
+            const { updateReadingListItem } = await import('../core/readingListStore');
+            const result = await updateReadingListItem(id, updates);
+            
+            return result;
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:updateReadingListItem:', err);
+            return { 
+                ok: false, 
+                error: err instanceof Error ? err.message : 'Unknown error'
+            };
+        }
+    });
+
+    ipcMain.handle('arc:getReadingList', async (_event, filter?: { isRead?: boolean; tags?: string[]; domain?: string; dateRange?: { start: number; end: number }; minReadingTime?: number; maxReadingTime?: number }) => {
+        try {
+            console.log('📚 [IPC] arc:getReadingList called with filter:', filter);
+            
+            const { getReadingList } = await import('../core/readingListStore');
+            const items = await getReadingList(filter);
+            
+            console.log('📚 [IPC] Returning', items.length, 'reading list items');
+            
+            return { ok: true, items };
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:getReadingList:', err);
+            return { 
+                ok: false, 
+                items: [],
+                error: err instanceof Error ? err.message : 'Unknown error'
+            };
+        }
+    });
+
+    ipcMain.handle('arc:getReadingListItem', async (_event, id: string) => {
+        try {
+            const { getReadingListItem } = await import('../core/readingListStore');
+            const item = await getReadingListItem(id);
+            
+            return { ok: true, item };
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:getReadingListItem:', err);
+            return { 
+                ok: false, 
+                item: null,
+                error: err instanceof Error ? err.message : 'Unknown error'
+            };
+        }
+    });
+
+    ipcMain.handle('arc:searchReadingList', async (_event, query: string) => {
+        try {
+            console.log('📚 [IPC] arc:searchReadingList called:', query);
+            
+            const { searchReadingList } = await import('../core/readingListStore');
+            const items = await searchReadingList(query);
+            
+            return { ok: true, items };
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:searchReadingList:', err);
+            return { 
+                ok: false, 
+                items: [],
+                error: err instanceof Error ? err.message : 'Unknown error'
+            };
+        }
+    });
+
+    ipcMain.handle('arc:getReadingListStats', async () => {
+        try {
+            const { getReadingListStats } = await import('../core/readingListStore');
+            const stats = await getReadingListStats();
+            
+            return { ok: true, stats };
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:getReadingListStats:', err);
+            return { 
+                ok: false, 
+                stats: null,
+                error: err instanceof Error ? err.message : 'Unknown error'
+            };
+        }
+    });
+
+    ipcMain.handle('arc:clearReadingList', async () => {
+        try {
+            const { clearReadingList } = await import('../core/readingListStore');
+            const result = await clearReadingList();
+            
+            return result;
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:clearReadingList:', err);
+            return { 
+                ok: false, 
+                error: err instanceof Error ? err.message : 'Unknown error'
+            };
+        }
+    });
+
+    ipcMain.handle('arc:exportReadingList', async () => {
+        try {
+            const { exportReadingList } = await import('../core/readingListStore');
+            const result = await exportReadingList();
+            
+            return result;
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:exportReadingList:', err);
+            return { 
+                ok: false, 
+                error: err instanceof Error ? err.message : 'Unknown error'
+            };
+        }
+    });
+
+    ipcMain.handle('arc:importReadingList', async (_event, data: any, mode: 'merge' | 'replace' = 'merge') => {
+        try {
+            console.log('📚 [IPC] arc:importReadingList called in', mode, 'mode');
+            
+            const { importReadingList } = await import('../core/readingListStore');
+            const result = await importReadingList(data, mode);
+            
+            return result;
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:importReadingList:', err);
+            return { 
+                ok: false, 
+                imported: 0,
+                error: err instanceof Error ? err.message : 'Unknown error'
+            };
+        }
+    });
+
+    // Translation handlers
+    ipcMain.handle('arc:detectLanguage', async (_event, text: string) => {
+        try {
+            console.log('🌐 [IPC] arc:detectLanguage called for text length:', text.length);
+            const { detectLanguage } = await import('../core/translation');
+            const result = await detectLanguage(text);
+            
+            if ('error' in result) {
+                return { ok: false, error: result.error, code: result.code };
+            }
+            
+            return { ok: true, result };
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:detectLanguage:', err);
+            return { 
+                ok: false, 
+                error: err instanceof Error ? err.message : 'Unknown error',
+                code: 'LANGUAGE_DETECTION_FAILED'
+            };
+        }
+    });
+
+    ipcMain.handle('arc:translateText', async (_event, text: string, targetLanguage: string, sourceLanguage?: string) => {
+        try {
+            console.log('🌐 [IPC] arc:translateText called:', { 
+                textLength: text.length, 
+                from: sourceLanguage || 'auto', 
+                to: targetLanguage 
+            });
+            const { translateText } = await import('../core/translation');
+            const result = await translateText(text, targetLanguage, sourceLanguage);
+            
+            if ('error' in result) {
+                return { ok: false, error: result.error, code: result.code };
+            }
+            
+            return { ok: true, result };
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:translateText:', err);
+            return { 
+                ok: false, 
+                error: err instanceof Error ? err.message : 'Unknown error',
+                code: 'TRANSLATION_FAILED'
+            };
+        }
+    });
+
+    ipcMain.handle('arc:translatePageContent', async (_event, content: string, targetLanguage: string, sourceLanguage?: string, options?: { chunkSize?: number; preserveFormatting?: boolean }) => {
+        try {
+            console.log('🌐 [IPC] arc:translatePageContent called:', { 
+                contentLength: content.length, 
+                from: sourceLanguage || 'auto', 
+                to: targetLanguage,
+                options 
+            });
+            const { translatePageContent } = await import('../core/translation');
+            const result = await translatePageContent(content, targetLanguage, sourceLanguage, options);
+            
+            if ('error' in result) {
+                return { ok: false, error: result.error, code: result.code };
+            }
+            
+            return { ok: true, result };
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:translatePageContent:', err);
+            return { 
+                ok: false, 
+                error: err instanceof Error ? err.message : 'Unknown error',
+                code: 'TRANSLATION_FAILED'
+            };
+        }
+    });
+
+    ipcMain.handle('arc:getSupportedLanguages', async () => {
+        try {
+            const { getAllSupportedLanguages, getPopularLanguages } = await import('../core/translation');
+            const allLanguages = getAllSupportedLanguages();
+            const popularLanguages = getPopularLanguages();
+            
+            return { 
+                ok: true, 
+                allLanguages, 
+                popularLanguages 
+            };
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:getSupportedLanguages:', err);
+            return { 
+                ok: false, 
+                error: err instanceof Error ? err.message : 'Unknown error'
+            };
+        }
+    });
+
+    ipcMain.handle('arc:clearTranslationCache', async () => {
+        try {
+            console.log('🌐 [IPC] arc:clearTranslationCache called');
+            const { clearTranslationCache } = await import('../core/translation');
+            const result = clearTranslationCache();
+            
+            return { ok: true, cleared: result.cleared };
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:clearTranslationCache:', err);
+            return { 
+                ok: false, 
+                error: err instanceof Error ? err.message : 'Unknown error'
+            };
+        }
+    });
+
+    ipcMain.handle('arc:getTranslationCacheStats', async () => {
+        try {
+            const { getTranslationCacheStats } = await import('../core/translation');
+            const stats = getTranslationCacheStats();
+            
+            return { ok: true, stats };
+        } catch (err) {
+            console.error('❌ [IPC] Error in arc:getTranslationCacheStats:', err);
+            return { 
+                ok: false, 
                 error: err instanceof Error ? err.message : 'Unknown error'
             };
         }
